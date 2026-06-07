@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
-import { Wrench, FileText, LayoutDashboard, Settings, Users, LogOut, CreditCard } from 'lucide-react';
+import { Wrench, FileText, LayoutDashboard, Settings, Users, LogOut, CreditCard, Menu, X } from 'lucide-react';
 
 // Components (we will create these next)
 import Dashboard from './pages/Dashboard';
@@ -33,42 +33,71 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { isManager, logout } = useAppContext();
+  const { isManager, logout, activeEmployee, user } = useAppContext();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+
   return (
     <div className="app-container">
-      <nav className="sidebar no-print">
-        <div className="sidebar-header">
+      {/* Mobile Header */}
+      <div className="mobile-header no-print">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>
           <Wrench size={24} />
-          <span>TonTon Boua</span>
+          <span>GSM SOLUTION</span>
+        </div>
+        <button onClick={() => setIsMobileMenuOpen(true)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+          <Menu size={24} color="var(--text-primary)" />
+        </button>
+      </div>
+
+      {/* Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="sidebar-overlay no-print" 
+          onClick={closeMobileMenu}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 45 }}
+        />
+      )}
+
+      <nav className={`sidebar no-print ${isMobileMenuOpen ? 'open' : ''}`}>
+        <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Wrench size={24} />
+            <span>GSM SOLUTION</span>
+          </div>
+          <button className="mobile-close-btn" onClick={closeMobileMenu} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+            <X size={24} color="var(--text-secondary)" />
+          </button>
         </div>
         <div className="nav-links">
-          <NavLink to="/" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
+          <NavLink to="/" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
             <LayoutDashboard size={20} />
             Tableau de bord
           </NavLink>
-          <NavLink to="/nouvelle-facture" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="/nouvelle-facture" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <FileText size={20} />
             Nouvelle Facture
           </NavLink>
-          <NavLink to="/reparations" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="/reparations" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Wrench size={20} />
             Suivi Réparations
           </NavLink>
-          <NavLink to="/clients" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="/clients" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Users size={20} />
             Clients
           </NavLink>
-          <NavLink to="/catalogue" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+          <NavLink to="/catalogue" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <FileText size={20} />
             Catalogue
           </NavLink>
           {isManager && (
             <>
-              <NavLink to="/abonnement" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <NavLink to="/abonnement" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <CreditCard size={20} />
                 Abonnement
               </NavLink>
-              <NavLink to="/parametres" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <NavLink to="/parametres" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <Settings size={20} />
                 Paramètres
               </NavLink>
@@ -76,10 +105,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           )}
           <div style={{ flex: 1 }}></div>
           <div style={{ padding: '0 1rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
-            Connecté : <strong>{useAppContext().activeEmployee?.name || useAppContext().user?.email}</strong>
+            Connecté : <strong>{activeEmployee?.name || user?.email}</strong>
           </div>
           <button 
-            onClick={() => logout()} 
+            onClick={() => { closeMobileMenu(); logout(); }} 
             className="nav-item" 
             style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', color: '#ef4444' }}
           >
