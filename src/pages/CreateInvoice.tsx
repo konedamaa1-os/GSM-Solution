@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Save } from 'lucide-react';
 
 const CreateInvoice = () => {
-  const { addInvoice, employees, deviceModels, commonIssues } = useAppContext();
+  const { addInvoice, employees, deviceModels, commonIssues, user } = useAppContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -24,9 +24,10 @@ const CreateInvoice = () => {
 
   React.useEffect(() => {
     if (!formData.employeeId && employees.length > 0) {
-      setFormData(prev => ({ ...prev, employeeId: employees[0].id }));
+      const loggedInEmployee = user?.email ? employees.find(emp => emp.email === user.email) : undefined;
+      setFormData(prev => ({ ...prev, employeeId: loggedInEmployee?.id || employees[0].id }));
     }
-  }, [employees, formData.employeeId]);
+  }, [employees, formData.employeeId, user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -146,7 +147,7 @@ const CreateInvoice = () => {
           <h3 className="card-header">Réparation & Facturation</h3>
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Technicien assigné *</label>
+              <label className="form-label">Technicien / Réceptionné par *</label>
               <select name="employeeId" required className="form-control" value={formData.employeeId} onChange={handleChange}>
                 {employees.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.name} ({emp.role})</option>

@@ -105,7 +105,7 @@ const InvoiceView = () => {
           </div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ borderTop: '1px solid var(--text-primary)', paddingTop: '0.5rem', width: '200px', margin: '0 auto' }}>
-              TonTon Boua (Technicien: {employee?.name || '________________'})
+              TonTon Boua (Réceptionné par: {employee?.name || '________________'})
             </div>
           </div>
         </div>

@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { PlusCircle, ArrowRight, Search } from 'lucide-react';
 
 const Dashboard = () => {
-  const { invoices } = useAppContext();
+  const { invoices, employees } = useAppContext();
   const [searchTerm, setSearchTerm] = React.useState('');
 
   const filteredInvoices = invoices.filter(invoice => 
@@ -77,7 +77,11 @@ const Dashboard = () => {
                 <div key={invoice.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
                   <div>
                     <div style={{ fontWeight: 500 }}>{invoice.invoiceNumber} - {invoice.customer.name}</div>
-                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{invoice.device.brand} {invoice.device.model}</div>
+                    <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                      {invoice.device.brand} {invoice.device.model} 
+                      <span style={{ margin: '0 8px' }}>|</span> 
+                      Réceptionné par: {employees.find(e => e.id === invoice.employeeId)?.name || 'Inconnu'}
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     {getStatusBadge(invoice.status)}
