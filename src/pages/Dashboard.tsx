@@ -6,6 +6,7 @@ import { PlusCircle, ArrowRight, Search } from 'lucide-react';
 const Dashboard = () => {
   const { invoices, employees } = useAppContext();
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [revenuePeriod, setRevenuePeriod] = React.useState<'today' | 'week' | 'month' | 'year' | 'all'>('today');
 
   const filteredInvoices = invoices.filter(invoice => 
     invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -17,10 +18,34 @@ const Dashboard = () => {
 
   const recentInvoices = filteredInvoices.slice(0, 5);
 
-  const today = new Date().toLocaleDateString();
-  const dailyRevenue = invoices
-    .filter(inv => inv.paymentStatus === 'Payé' && new Date(inv.date).toLocaleDateString() === today)
-    .reduce((sum, inv) => sum + inv.price, 0);
+  const filteredRevenue = invoices.filter(inv => {
+    if (inv.paymentStatus !== 'Payé') return false;
+    
+    const invDate = new Date(inv.date);
+    const now = new Date();
+    
+    switch (revenuePeriod) {
+      case 'today':
+        return invDate.toLocaleDateString() === now.toLocaleDateString();
+      case 'week': {
+        const firstDayOfWeek = new Date(now);
+        const day = now.getDay() || 7; // Convert Sunday (0) to 7
+        if (day !== 1) {
+          firstDayOfWeek.setHours(-24 * (day - 1));
+        }
+        firstDayOfWeek.setHours(0, 0, 0, 0);
+        return invDate >= firstDayOfWeek;
+      }
+      case 'month':
+        return invDate.getMonth() === now.getMonth() && invDate.getFullYear() === now.getFullYear();
+      case 'year':
+        return invDate.getFullYear() === now.getFullYear();
+      case 'all':
+        return true;
+      default:
+        return false;
+    }
+  }).reduce((sum, inv) => sum + inv.price, 0);
 
   const unpaidTotal = invoices
     .filter(inv => inv.paymentStatus === 'Impayé')
@@ -77,11 +102,30 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <h3 className="card-header">Comptabilité & Paiements</h3>
+          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>Comptabilité & Paiements</h3>
+            <select 
+              className="form-control" 
+              style={{ width: 'auto', marginBottom: 0, padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+              value={revenuePeriod}
+              onChange={(e) => setRevenuePeriod(e.target.value as any)}
+            >
+              <option value="today">Aujourd'hui</option>
+              <option value="week">Cette semaine</option>
+              <option value="month">Ce mois-ci</option>
+              <option value="year">Cette année</option>
+              <option value="all">Tout le temps</option>
+            </select>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
             <div style={{ padding: '1rem', backgroundColor: '#dcfce7', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#166534' }}>{dailyRevenue.toLocaleString()} CFA</div>
-              <div style={{ color: 'var(--text-secondary)' }}>Recette du jour</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#166534' }}>{filteredRevenue.toLocaleString()} CFA</div>
+              <div style={{ color: 'var(--text-secondary)' }}>
+                {revenuePeriod === 'today' ? 'Recette du jour' :
+                 revenuePeriod === 'week' ? 'Recette de la semaine' :
+                 revenuePeriod === 'month' ? 'Recette du mois' :
+                 revenuePeriod === 'year' ? 'Recette de l\'année' : 'Total encaissé'}
+              </div>
             </div>
             <div 
               style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '8px', textAlign: 'center', cursor: 'pointer' }}
