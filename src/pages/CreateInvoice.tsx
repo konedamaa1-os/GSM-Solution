@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Save } from 'lucide-react';
 
 const CreateInvoice = () => {
-  const { addInvoice, employees, deviceModels, commonIssues, activeEmployee } = useAppContext();
+  const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee } = useAppContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -21,6 +21,17 @@ const CreateInvoice = () => {
     warrantyMonths: '3',
     notes: ''
   });
+
+  // Extraire les clients uniques pour l'auto-complétion
+  const uniqueCustomers = React.useMemo(() => {
+    const map = new Map();
+    invoices.forEach(inv => {
+      if (inv.customer && inv.customer.phone) {
+        map.set(inv.customer.phone, inv.customer);
+      }
+    });
+    return Array.from(map.values());
+  }, [invoices]);
 
   React.useEffect(() => {
     if (!formData.employeeId && employees.length > 0) {
@@ -40,7 +51,19 @@ const CreateInvoice = () => {
       }
     }
     
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const newData = { ...prev, [name]: value };
+      
+      // Auto-remplissage du nom si le téléphone correspond à un client existant
+      if (name === 'customerPhone') {
+        const existingCustomer = uniqueCustomers.find(c => c.phone === value);
+        if (existingCustomer) {
+          newData.customerName = existingCustomer.name;
+        }
+      }
+      
+      return newData;
+    });
   };
 
   // Get unique brands for the datalist
@@ -93,7 +116,12 @@ const CreateInvoice = () => {
             </div>
             <div className="form-group">
               <label className="form-label">Téléphone *</label>
-              <input type="tel" name="customerPhone" required className="form-control" value={formData.customerPhone} onChange={handleChange} />
+              <input type="tel" name="customerPhone" list="phones-list" required className="form-control" placeholder="Rechercher ou saisir..." value={formData.customerPhone} onChange={handleChange} />
+              <datalist id="phones-list">
+                {uniqueCustomers.map((c: any) => (
+                  <option key={c.phone} value={c.phone}>{c.name}</option>
+                ))}
+              </datalist>
             </div>
           </div>
         </div>
