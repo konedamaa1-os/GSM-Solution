@@ -43,7 +43,7 @@ const Login = () => {
           <div style={{ backgroundColor: 'var(--primary-color)', color: 'white', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
             <Wrench size={32} />
           </div>
-          <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-color)' }}>TonTon Boua</h2>
+          <h2 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-color)' }}>GSM SOLUTION</h2>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem' }}>Connexion à l'espace de gestion</p>
         </div>
 
