@@ -66,5 +66,4 @@ export interface AppState {
   settings: ShopSettings;
   deviceModels: DeviceModel[];
   commonIssues: CommonIssue[];
-  activeEmployee?: Employee | null;
 }

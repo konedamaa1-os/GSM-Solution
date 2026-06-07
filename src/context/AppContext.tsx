@@ -21,7 +21,6 @@ interface AppContextType extends AppState {
   isManager: boolean;
   deleteCustomer: (id: string) => Promise<{ error: any }>;
   activeEmployee: Employee | null;
-  setActiveEmployee: (employee: Employee | null) => void;
 }
 
 const defaultSettings: ShopSettings = {
@@ -43,23 +42,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
-  const [activeEmployee, setActiveEmployeeState] = useState<Employee | null>(null);
-
-  const setActiveEmployee = (employee: Employee | null) => {
-    setActiveEmployeeState(employee);
-    if (employee) {
-      localStorage.setItem('tontonboua_active_employee_id', employee.id);
-    } else {
-      localStorage.removeItem('tontonboua_active_employee_id');
-    }
-  };
-
-  const currentUserRole = React.useMemo(() => {
+  const activeEmployee = React.useMemo(() => {
     if (!user || !user.email) return null;
-    const emp = employees.find(e => e.email === user.email);
-    return emp ? emp.role : null;
+    return employees.find(e => e.email === user.email) || null;
   }, [user, employees]);
 
+  const currentUserRole = activeEmployee ? activeEmployee.role : null;
   const isManager = currentUserRole === 'Manager';
 
   const fetchData = async () => {
@@ -115,13 +103,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         notes: inv.notes
       }));
       setInvoices(formattedInvoices);
-    }
-
-    // Load active employee from local storage
-    const savedEmpId = localStorage.getItem('tontonboua_active_employee_id');
-    if (savedEmpId && employeesData) {
-      const emp = employeesData.find(e => e.id === savedEmpId);
-      if (emp) setActiveEmployeeState(emp);
     }
 
     setLoading(false);
@@ -341,7 +322,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addInvoice, updateInvoiceStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, setActiveEmployee
+      activeEmployee
     }}>
       {children}
     </AppContext.Provider>
