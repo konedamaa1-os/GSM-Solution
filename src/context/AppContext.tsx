@@ -19,6 +19,7 @@ interface AppContextType extends AppState {
   session: Session | null;
   currentUserRole: string | null;
   isManager: boolean;
+  deleteCustomer: (id: string) => Promise<{ error: any }>;
 }
 
 const defaultSettings: ShopSettings = {
@@ -260,12 +261,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteCustomer = async (id: string) => {
+    // Delete customer from database
+    const { error } = await supabase.from('tb_customers').delete().eq('id', id);
+    if (!error) {
+      // Remove all invoices related to this customer from local state
+      setInvoices(invoices.filter(inv => inv.customer.id !== id));
+    }
+    return { error };
+  };
+
   return (
     <AppContext.Provider value={{ 
       invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
-      loading, user, session, currentUserRole, isManager 
+      loading, user, session, currentUserRole, isManager, deleteCustomer 
     }}>
       {children}
     </AppContext.Provider>

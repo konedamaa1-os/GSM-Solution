@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Users, Phone, Mail, FileText } from 'lucide-react';
+import { Users, Phone, Mail, FileText, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Customer, Invoice } from '../types';
 
 const Customers = () => {
-  const { invoices } = useAppContext();
+  const { invoices, deleteCustomer, isManager } = useAppContext();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Extraire les clients uniques à partir des factures
@@ -25,6 +25,15 @@ const Customers = () => {
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.phone.includes(searchTerm)
   );
+
+  const handleDeleteCustomer = async (id: string, name: string) => {
+    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le client "${name}" et tout son historique de factures ? Cette action est irréversible.`)) {
+      const { error } = await deleteCustomer(id);
+      if (error) {
+        alert("Erreur lors de la suppression. Le client a peut-être des données liées (factures) qui empêchent sa suppression.");
+      }
+    }
+  };
 
   return (
     <div>
@@ -67,8 +76,20 @@ const Customers = () => {
                       )}
                     </div>
                   </div>
-                  <div style={{ padding: '0.5rem 1rem', backgroundColor: '#f3f4f6', borderRadius: '20px', fontSize: '0.875rem', fontWeight: 500 }}>
-                    {invoices.length} {invoices.length > 1 ? 'réparations' : 'réparation'}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ padding: '0.5rem 1rem', backgroundColor: '#f3f4f6', borderRadius: '20px', fontSize: '0.875rem', fontWeight: 500 }}>
+                      {invoices.length} {invoices.length > 1 ? 'réparations' : 'réparation'}
+                    </div>
+                    {isManager && (
+                      <button 
+                        onClick={() => handleDeleteCustomer(customer.id, customer.name)}
+                        className="btn btn-secondary" 
+                        style={{ padding: '0.5rem', color: '#ef4444', border: '1px solid #fee2e2', backgroundColor: '#fef2f2' }}
+                        title="Supprimer le client"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
                   </div>
                 </div>
 
