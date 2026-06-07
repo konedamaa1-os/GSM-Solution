@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { AppState, Invoice, Employee, ShopSettings, RepairStatus, DeviceModel, CommonIssue } from '../types';
 import { supabase } from '../lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid';
+
 
 interface AppContextType extends AppState {
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => Promise<void>;
@@ -139,7 +139,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Insert Customer
     let customerId = invoiceData.customer.id;
     // We check if customer already exists (in real app we might search by phone, but here we just insert)
-    const { data: customerData, error: custError } = await supabase.from('tb_customers').insert({
+    const { data: customerData } = await supabase.from('tb_customers').insert({
       name: invoiceData.customer.name,
       phone: invoiceData.customer.phone,
       email: invoiceData.customer.email,
@@ -149,7 +149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (customerData) customerId = customerData.id;
 
     // Insert Invoice
-    const { data: newInvData, error: invError } = await supabase.from('tb_invoices').insert({
+    const { data: newInvData } = await supabase.from('tb_invoices').insert({
       invoice_number: invoiceNumber,
       date,
       customer_id: customerId,
@@ -193,7 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addEmployee = async (employeeData: Omit<Employee, 'id'>) => {
-    const { data, error } = await supabase.from('tb_employees').insert({
+    const { data } = await supabase.from('tb_employees').insert({
       name: employeeData.name,
       role: employeeData.role,
       email: employeeData.email

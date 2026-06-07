@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { Users, Phone, Mail, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';

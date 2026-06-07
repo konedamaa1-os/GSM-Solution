@@ -26,6 +26,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+const AdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isManager } = useAppContext();
+  if (!isManager) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const { isManager } = useAppContext();
   return (
@@ -99,7 +105,7 @@ function App() {
                     <Route path="/facture/:id" element={<InvoiceView />} />
                     <Route path="/clients" element={<Customers />} />
                     <Route path="/catalogue" element={<Catalog />} />
-                    {isManager && <Route path="/parametres" element={<SettingsPage />} />}
+                    <Route path="/parametres" element={<AdminRoute><SettingsPage /></AdminRoute>} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>
