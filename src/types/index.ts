@@ -39,12 +39,17 @@ export interface Invoice {
   notes?: string;
 }
 
+export type SubscriptionPlan = 'Standard' | 'Professionnelle';
+
 export interface ShopSettings {
   name: string;
   address: string;
   phone: string;
   email: string;
   termsAndConditions: string;
+  subscription_plan?: SubscriptionPlan;
+  subscription_end_date?: string;
+  subscription_status?: 'active' | 'expired';
 }
 
 export interface DeviceModel {
