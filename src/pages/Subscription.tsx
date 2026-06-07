@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { CheckCircle, AlertTriangle, Star, Shield } from 'lucide-react';
 

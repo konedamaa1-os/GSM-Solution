@@ -74,7 +74,7 @@ const CreateInvoice = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const success = await addInvoice({
+    const newInvoice = {
       customer: {
         id: crypto.randomUUID(),
         name: formData.customerName,
@@ -93,13 +93,12 @@ const CreateInvoice = () => {
       employeeId: formData.employeeId,
       price: Number(formData.price),
       warrantyMonths: Number(formData.warrantyMonths),
-      status: 'In Progress',
-      // Si un client a un compte à régler, ajouter la facture avec le statut 'Impayé'
-      paymentStatus: 'Impayé',
+      status: 'In Progress' as const,
+      paymentStatus: 'Impayé' as const,
       notes: formData.notes
     };
     
-    const success = await addInvoice(newInvoice);
+    const success = await addInvoice(newInvoice as any);
 
     if (success) {
       navigate('/');
