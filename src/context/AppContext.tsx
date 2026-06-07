@@ -15,6 +15,7 @@ interface AppContextType extends AppState {
   deleteDeviceModel: (id: string) => Promise<void>;
   addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at'>) => Promise<void>;
   deleteCommonIssue: (id: string) => Promise<void>;
+  forceLoginAsAdmin: () => void;
   loading: boolean;
   user: User | null;
   session: Session | null;
@@ -134,6 +135,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const forceLoginAsAdmin = () => {
+    setUser({ email: 'admin@tontonboua.com', id: 'dev-bypass-id' } as any);
+    setSession({} as any);
+    fetchData();
+  };
 
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>): Promise<boolean> => {
     const currentYear = new Date().getFullYear();
@@ -332,7 +339,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee
+      activeEmployee, forceLoginAsAdmin
     }}>
       {children}
     </AppContext.Provider>

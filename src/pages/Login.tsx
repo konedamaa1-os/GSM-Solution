@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Wrench } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useAppContext } from '../context/AppContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { forceLoginAsAdmin } = useAppContext();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,6 +94,25 @@ const Login = () => {
               Pas encore de compte ? S'inscrire
             </Link>
           </div>
+          
+          <button 
+            type="button" 
+            onClick={() => { forceLoginAsAdmin(); navigate('/'); }}
+            style={{ 
+              width: '100%', 
+              justifyContent: 'center', 
+              padding: '0.75rem', 
+              marginTop: '1.5rem',
+              backgroundColor: '#fee2e2',
+              color: '#991b1b',
+              border: '1px solid #fca5a5',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            🚧 Accès Rapide Admin (Sans Email)
+          </button>
         </form>
       </div>
     </div>

@@ -6,7 +6,9 @@ import { PlusCircle, ArrowRight, Search } from 'lucide-react';
 const Dashboard = () => {
   const { invoices, employees } = useAppContext();
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [revenuePeriod, setRevenuePeriod] = React.useState<'today' | 'week' | 'month' | 'year' | 'all'>('today');
+  const [revenuePeriod, setRevenuePeriod] = React.useState<'today' | 'week' | 'month' | 'year' | 'all' | 'custom'>('today');
+  const [startDate, setStartDate] = React.useState('');
+  const [endDate, setEndDate] = React.useState('');
 
   const filteredInvoices = invoices.filter(invoice => 
     invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -42,6 +44,16 @@ const Dashboard = () => {
         return invDate.getFullYear() === now.getFullYear();
       case 'all':
         return true;
+      case 'custom': {
+        if (startDate && endDate) {
+          return invDate >= new Date(startDate) && invDate <= new Date(endDate + 'T23:59:59');
+        } else if (startDate) {
+          return invDate >= new Date(startDate);
+        } else if (endDate) {
+          return invDate <= new Date(endDate + 'T23:59:59');
+        }
+        return true;
+      }
       default:
         return false;
     }
@@ -104,18 +116,28 @@ const Dashboard = () => {
         <div className="card">
           <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h3 style={{ margin: 0 }}>Comptabilité & Paiements</h3>
-            <select 
-              className="form-control" 
-              style={{ width: 'auto', marginBottom: 0, padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
-              value={revenuePeriod}
-              onChange={(e) => setRevenuePeriod(e.target.value as any)}
-            >
-              <option value="today">Aujourd'hui</option>
-              <option value="week">Cette semaine</option>
-              <option value="month">Ce mois-ci</option>
-              <option value="year">Cette année</option>
-              <option value="all">Tout le temps</option>
-            </select>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {revenuePeriod === 'custom' && (
+                <>
+                  <input type="date" className="form-control" style={{ width: 'auto', marginBottom: 0, padding: '0.25rem' }} value={startDate} onChange={e => setStartDate(e.target.value)} />
+                  <span>au</span>
+                  <input type="date" className="form-control" style={{ width: 'auto', marginBottom: 0, padding: '0.25rem' }} value={endDate} onChange={e => setEndDate(e.target.value)} />
+                </>
+              )}
+              <select 
+                className="form-control" 
+                style={{ width: 'auto', marginBottom: 0, padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
+                value={revenuePeriod}
+                onChange={(e) => setRevenuePeriod(e.target.value as any)}
+              >
+                <option value="today">Aujourd'hui</option>
+                <option value="week">Cette semaine</option>
+                <option value="month">Ce mois-ci</option>
+                <option value="year">Cette année</option>
+                <option value="all">Tout le temps</option>
+                <option value="custom">Période personnalisée</option>
+              </select>
+            </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
             <div style={{ padding: '1rem', backgroundColor: '#dcfce7', borderRadius: '8px', textAlign: 'center' }}>
@@ -124,7 +146,8 @@ const Dashboard = () => {
                 {revenuePeriod === 'today' ? 'Recette du jour' :
                  revenuePeriod === 'week' ? 'Recette de la semaine' :
                  revenuePeriod === 'month' ? 'Recette du mois' :
-                 revenuePeriod === 'year' ? 'Recette de l\'année' : 'Total encaissé'}
+                 revenuePeriod === 'year' ? 'Recette de l\'année' : 
+                 revenuePeriod === 'custom' ? 'Recette sur la période' : 'Total encaissé'}
               </div>
             </div>
             <div 
