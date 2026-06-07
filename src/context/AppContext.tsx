@@ -89,14 +89,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (invoicesData) {
       const formattedInvoices: Invoice[] = invoicesData
-        .filter(inv => inv.customer && inv.device && inv.device.length > 0)
+        .filter(inv => inv.customer && inv.device)
         .map(inv => ({
         id: inv.id,
         invoiceNumber: inv.invoice_number,
         date: inv.date,
-        customer: inv.customer,
+        customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
         employeeId: inv.employee_id,
-        device: inv.device[0], // Assuming 1-to-1 relationship, PostgREST returns array for reverse relation
+        device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
         price: inv.price,
         warrantyMonths: inv.warranty_months,
         status: inv.status as RepairStatus,
