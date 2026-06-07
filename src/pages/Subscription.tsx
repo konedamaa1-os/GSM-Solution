@@ -85,11 +85,9 @@ const Subscription = () => {
             <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>50 000 CFA <span style={{ fontSize: '1rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>/ an</span></div>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0' }}>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Gestion des réparations</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Impressions de factures</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Jusqu'à 2 employés</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>❌ Module de Comptabilité</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>❌ Suivi des paiements</li>
+            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Toutes les fonctionnalités</li>
+            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Module de Comptabilité inclus</li>
+            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>⚠️ Limité à 20 factures</li>
           </ul>
           <button 
             className="btn" 
@@ -116,11 +114,9 @@ const Subscription = () => {
             <div style={{ fontSize: '2rem', fontWeight: 'bold' }}>150 000 CFA <span style={{ fontSize: '1rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>/ an</span></div>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem 0' }}>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Tout le plan Standard</li>
+            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Toutes les fonctionnalités</li>
             <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Employés illimités</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Module de Comptabilité</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Suivi des factures impayées</li>
-            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Filtres par période</li>
+            <li style={{ padding: '0.5rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><CheckCircle size={18} color="#10b981" /> Factures illimitées</li>
           </ul>
           <button 
             className="btn btn-primary" 

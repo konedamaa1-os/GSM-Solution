@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Save } from 'lucide-react';
 
 const CreateInvoice = () => {
-  const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee } = useAppContext();
+  const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee, settings } = useAppContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -94,14 +94,34 @@ const CreateInvoice = () => {
       price: Number(formData.price),
       warrantyMonths: Number(formData.warrantyMonths),
       status: 'In Progress',
+      // Si un client a un compte à régler, ajouter la facture avec le statut 'Impayé'
       paymentStatus: 'Impayé',
       notes: formData.notes
-    });
+    };
+    
+    const success = await addInvoice(newInvoice);
 
     if (success) {
       navigate('/');
     }
   };
+
+  const currentPlan = settings.subscription_plan || 'Standard';
+  const isLimitReached = currentPlan === 'Standard' && invoices.length >= 20;
+
+  if (isLimitReached) {
+    return (
+      <div style={{ maxWidth: '600px', margin: '4rem auto', textAlign: 'center', padding: '2rem', backgroundColor: '#fee2e2', borderRadius: '8px', border: '1px solid #f87171' }}>
+        <h2 style={{ color: '#991b1b', marginBottom: '1rem' }}>Limite atteinte (Plan Standard)</h2>
+        <p style={{ color: '#7f1d1d', marginBottom: '2rem', fontSize: '1.1rem' }}>
+          Vous avez atteint la limite de 20 factures de votre forfait Standard. Pour continuer à gérer votre activité et créer des factures en illimité, veuillez passer au forfait Professionnel.
+        </p>
+        <button className="btn btn-primary" onClick={() => navigate('/abonnement')}>
+          Découvrir le plan Professionnel
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
