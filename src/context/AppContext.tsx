@@ -7,6 +7,7 @@ import type { Session, User } from '@supabase/supabase-js';
 interface AppContextType extends AppState {
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => Promise<boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
+  updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus']) => Promise<void>;
   addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   updateSettings: (settings: ShopSettings) => Promise<void>;
@@ -100,6 +101,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         price: inv.price,
         warrantyMonths: inv.warranty_months,
         status: inv.status as RepairStatus,
+        paymentStatus: inv.payment_status || 'Impayé',
         notes: inv.notes
       }));
       setInvoices(formattedInvoices);
@@ -191,6 +193,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       price: invoiceData.price,
       warranty_months: invoiceData.warrantyMonths,
       status: invoiceData.status,
+      payment_status: invoiceData.paymentStatus,
       notes: invoiceData.notes
     }).select().single();
 
@@ -235,6 +238,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { error } = await supabase.from('tb_invoices').update({ status }).eq('id', id);
     if (!error) {
       setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status } : inv));
+    }
+  };
+
+  const updateInvoicePaymentStatus = async (id: string, payment_status: Invoice['paymentStatus']) => {
+    const { error } = await supabase.from('tb_invoices').update({ payment_status }).eq('id', id);
+    if (!error) {
+      setInvoices(invoices.map(inv => inv.id === id ? { ...inv, paymentStatus: payment_status } : inv));
     }
   };
 
@@ -319,7 +329,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider value={{ 
       invoices, employees, settings, deviceModels, commonIssues, 
-      addInvoice, updateInvoiceStatus, addEmployee, deleteEmployee, updateSettings, 
+      addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
       activeEmployee

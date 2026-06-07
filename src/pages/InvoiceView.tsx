@@ -4,7 +4,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 
 const InvoiceView = () => {
   const { id } = useParams<{ id: string }>();
-  const { invoices, employees } = useAppContext();
+  const { invoices, employees, updateInvoicePaymentStatus } = useAppContext();
   const navigate = useNavigate();
 
   const invoice = invoices.find(i => i.id === id);
@@ -19,6 +19,11 @@ const InvoiceView = () => {
     window.print();
   };
 
+  const handleTogglePayment = async () => {
+    const newStatus = invoice.paymentStatus === 'Payé' ? 'Impayé' : 'Payé';
+    await updateInvoicePaymentStatus(invoice.id, newStatus);
+  };
+
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto' }}>
       <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem' }}>
@@ -27,6 +32,26 @@ const InvoiceView = () => {
         </button>
         <button className="btn btn-primary" onClick={handlePrint}>
           <Printer size={18} /> Imprimer
+        </button>
+      </div>
+
+      <div className="no-print" style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem', alignItems: 'center' }}>
+        <span style={{ fontWeight: 500 }}>Statut de paiement:</span>
+        <span style={{
+          padding: '0.25rem 0.75rem',
+          borderRadius: '999px',
+          fontSize: '0.875rem',
+          fontWeight: 600,
+          backgroundColor: invoice.paymentStatus === 'Payé' ? '#dcfce7' : '#fee2e2',
+          color: invoice.paymentStatus === 'Payé' ? '#166534' : '#991b1b'
+        }}>
+          {invoice.paymentStatus}
+        </span>
+        <button 
+          className="btn btn-secondary" 
+          onClick={handleTogglePayment}
+        >
+          Marquer comme {invoice.paymentStatus === 'Payé' ? 'Impayé' : 'Payé'}
         </button>
       </div>
 

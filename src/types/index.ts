@@ -14,6 +14,7 @@ export interface Customer {
 }
 
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
+export type PaymentStatus = 'Payé' | 'Impayé';
 
 export interface DeviceInfo {
   brand: string;
@@ -34,6 +35,7 @@ export interface Invoice {
   price: number;
   warrantyMonths: number;
   status: RepairStatus;
+  paymentStatus: PaymentStatus;
   notes?: string;
 }
 

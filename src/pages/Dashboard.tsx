@@ -10,10 +10,21 @@ const Dashboard = () => {
   const filteredInvoices = invoices.filter(invoice => 
     invoice.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
     invoice.customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    invoice.customer.phone.includes(searchTerm)
+    invoice.customer.phone.includes(searchTerm) ||
+    (searchTerm.toLowerCase() === 'impayé' && invoice.paymentStatus === 'Impayé') ||
+    (searchTerm.toLowerCase() === 'payé' && invoice.paymentStatus === 'Payé')
   );
 
   const recentInvoices = filteredInvoices.slice(0, 5);
+
+  const today = new Date().toLocaleDateString();
+  const dailyRevenue = invoices
+    .filter(inv => inv.paymentStatus === 'Payé' && new Date(inv.date).toLocaleDateString() === today)
+    .reduce((sum, inv) => sum + inv.price, 0);
+
+  const unpaidTotal = invoices
+    .filter(inv => inv.paymentStatus === 'Impayé')
+    .reduce((sum, inv) => sum + inv.price, 0);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -66,6 +77,23 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
+          <h3 className="card-header">Comptabilité & Paiements</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#dcfce7', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#166534' }}>{dailyRevenue.toLocaleString()} CFA</div>
+              <div style={{ color: 'var(--text-secondary)' }}>Recette du jour</div>
+            </div>
+            <div 
+              style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '8px', textAlign: 'center', cursor: 'pointer' }}
+              onClick={() => setSearchTerm('Impayé')}
+            >
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#991b1b' }}>{unpaidTotal.toLocaleString()} CFA</div>
+              <div style={{ color: 'var(--text-secondary)' }}>Total Impayés</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
           <h3 className="card-header">
             {searchTerm ? 'Résultats de recherche' : 'Dernières Factures'}
           </h3>
@@ -84,6 +112,16 @@ const Dashboard = () => {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{
+                      padding: '0.2rem 0.5rem',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      backgroundColor: invoice.paymentStatus === 'Payé' ? '#dcfce7' : '#fee2e2',
+                      color: invoice.paymentStatus === 'Payé' ? '#166534' : '#991b1b'
+                    }}>
+                      {invoice.paymentStatus}
+                    </span>
                     {getStatusBadge(invoice.status)}
                     <Link to={`/facture/${invoice.id}`} style={{ color: 'var(--primary-color)' }}>
                       <ArrowRight size={18} />

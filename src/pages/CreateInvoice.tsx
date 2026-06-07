@@ -93,7 +93,8 @@ const CreateInvoice = () => {
       employeeId: formData.employeeId,
       price: Number(formData.price),
       warrantyMonths: Number(formData.warrantyMonths),
-      status: 'En cours',
+      status: 'In Progress',
+      paymentStatus: 'Impayé',
       notes: formData.notes
     });
 
