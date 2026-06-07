@@ -98,32 +98,9 @@ const Dashboard = () => {
 
       <div className="form-row">
         <div className="card">
-          <h3 className="card-header">Statistiques</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>{invoices.length}</div>
-              <div style={{ color: 'var(--text-secondary)' }}>Total Factures</div>
-            </div>
-            <div style={{ padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#d97706' }}>
-                {invoices.filter(i => i.status === 'Pending' || i.status === 'In Progress').length}
-              </div>
-              <div style={{ color: 'var(--text-secondary)' }}>Réparations en cours</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="card-header" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <h3 style={{ margin: 0 }}>Comptabilité & Paiements</h3>
-            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-              {revenuePeriod === 'custom' && (
-                <>
-                  <input type="date" className="form-control" style={{ width: 'auto', marginBottom: 0, padding: '0.25rem' }} value={startDate} onChange={e => setStartDate(e.target.value)} />
-                  <span>au</span>
-                  <input type="date" className="form-control" style={{ width: 'auto', marginBottom: 0, padding: '0.25rem' }} value={endDate} onChange={e => setEndDate(e.target.value)} />
-                </>
-              )}
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
               <select 
                 className="form-control" 
                 style={{ width: 'auto', marginBottom: 0, padding: '0.25rem 0.5rem', fontSize: '0.875rem' }}
@@ -137,6 +114,13 @@ const Dashboard = () => {
                 <option value="all">Tout le temps</option>
                 <option value="custom">Période personnalisée</option>
               </select>
+              {revenuePeriod === 'custom' && (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginLeft: '0.5rem' }}>
+                  <input type="date" className="form-control" style={{ width: 'auto', marginBottom: 0, padding: '0.25rem' }} value={startDate} onChange={e => setStartDate(e.target.value)} />
+                  <span style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>au</span>
+                  <input type="date" className="form-control" style={{ width: 'auto', marginBottom: 0, padding: '0.25rem' }} value={endDate} onChange={e => setEndDate(e.target.value)} />
+                </div>
+              )}
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
@@ -156,6 +140,22 @@ const Dashboard = () => {
             >
               <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#991b1b' }}>{unpaidTotal.toLocaleString()} CFA</div>
               <div style={{ color: 'var(--text-secondary)' }}>Total Impayés</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <h3 className="card-header">Statistiques</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+            <div style={{ padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>{invoices.length}</div>
+              <div style={{ color: 'var(--text-secondary)' }}>Total Factures</div>
+            </div>
+            <div style={{ padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#d97706' }}>
+                {invoices.filter(i => i.status === 'Pending' || i.status === 'In Progress').length}
+              </div>
+              <div style={{ color: 'var(--text-secondary)' }}>Réparations en cours</div>
             </div>
           </div>
         </div>
