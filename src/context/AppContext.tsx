@@ -1,0 +1,268 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import type { AppState, Invoice, Employee, ShopSettings, RepairStatus, DeviceModel, CommonIssue } from '../types';
+import { supabase } from '../lib/supabase';
+import type { Session, User } from '@supabase/supabase-js';
+import { v4 as uuidv4 } from 'uuid';
+
+interface AppContextType extends AppState {
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => Promise<void>;
+  updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
+  deleteEmployee: (id: string) => Promise<void>;
+  updateSettings: (settings: ShopSettings) => Promise<void>;
+  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'created_at'>) => Promise<void>;
+  deleteDeviceModel: (id: string) => Promise<void>;
+  addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at'>) => Promise<void>;
+  deleteCommonIssue: (id: string) => Promise<void>;
+  loading: boolean;
+  user: User | null;
+  session: Session | null;
+}
+
+const defaultSettings: ShopSettings = {
+  name: 'TonTon Boua',
+  address: '123 Rue de la Réparation, 75000 Paris',
+  phone: '01 23 45 67 89',
+  email: 'contact@tontonboua.com',
+  termsAndConditions: 'Garantie de 3 mois sur toutes les réparations. Les appareils non réclamés après 60 jours seront recyclés.',
+};
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [settings, setSettings] = useState<ShopSettings>(defaultSettings);
+  const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
+  const [commonIssues, setCommonIssues] = useState<CommonIssue[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+
+  const fetchData = async () => {
+    setLoading(true);
+    
+    // Fetch Settings
+    const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').limit(1).single();
+    if (settingsData) {
+      setSettings(settingsData);
+    }
+
+    // Fetch Employees
+    const { data: employeesData } = await supabase.from('tb_employees').select('*');
+    if (employeesData) {
+      setEmployees(employeesData);
+    }
+
+    // Fetch Device Models
+    const { data: modelsData } = await supabase.from('tb_device_models').select('*').order('brand', { ascending: true });
+    if (modelsData) {
+      setDeviceModels(modelsData);
+    }
+
+    // Fetch Common Issues
+    const { data: issuesData } = await supabase.from('tb_common_issues').select('*').order('name', { ascending: true });
+    if (issuesData) {
+      setCommonIssues(issuesData);
+    }
+
+    // Fetch Invoices with Customers and Devices
+    const { data: invoicesData } = await supabase
+      .from('tb_invoices')
+      .select(`
+        *,
+        customer:tb_customers(*),
+        device:tb_devices(*)
+      `)
+      .order('date', { ascending: false });
+
+    if (invoicesData) {
+      const formattedInvoices: Invoice[] = invoicesData.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoice_number,
+        date: inv.date,
+        customer: inv.customer,
+        employeeId: inv.employee_id,
+        device: inv.device[0], // Assuming 1-to-1 relationship, PostgREST returns array for reverse relation
+        price: inv.price,
+        warrantyMonths: inv.warranty_months,
+        status: inv.status as RepairStatus,
+        notes: inv.notes
+      }));
+      setInvoices(formattedInvoices);
+    }
+
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session) fetchData();
+      else setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      if (session) fetchData();
+      else {
+        // Clear data on logout
+        setInvoices([]);
+        setEmployees([]);
+        setDeviceModels([]);
+        setCommonIssues([]);
+        setSettings(defaultSettings);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => {
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, '0')}`;
+    const date = new Date().toISOString();
+    
+    // Insert Customer
+    let customerId = invoiceData.customer.id;
+    // We check if customer already exists (in real app we might search by phone, but here we just insert)
+    const { data: customerData, error: custError } = await supabase.from('tb_customers').insert({
+      name: invoiceData.customer.name,
+      phone: invoiceData.customer.phone,
+      email: invoiceData.customer.email,
+      address: invoiceData.customer.address
+    }).select().single();
+    
+    if (customerData) customerId = customerData.id;
+
+    // Insert Invoice
+    const { data: newInvData, error: invError } = await supabase.from('tb_invoices').insert({
+      invoice_number: invoiceNumber,
+      date,
+      customer_id: customerId,
+      employee_id: invoiceData.employeeId,
+      price: invoiceData.price,
+      warranty_months: invoiceData.warrantyMonths,
+      status: invoiceData.status,
+      notes: invoiceData.notes
+    }).select().single();
+
+    if (newInvData) {
+      // Insert Device
+      const { data: deviceData } = await supabase.from('tb_devices').insert({
+        invoice_id: newInvData.id,
+        brand: invoiceData.device.brand,
+        model: invoiceData.device.model,
+        serial_number: invoiceData.device.serialNumber,
+        issue: invoiceData.device.issue,
+        accessories: invoiceData.device.accessories,
+        password: invoiceData.device.password
+      }).select().single();
+
+      // Update local state
+      const newInvoice: Invoice = {
+        ...invoiceData,
+        id: newInvData.id,
+        invoiceNumber,
+        date,
+        customer: customerData || invoiceData.customer,
+        device: deviceData || invoiceData.device
+      };
+      setInvoices([newInvoice, ...invoices]);
+    }
+  };
+
+  const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {
+    const { error } = await supabase.from('tb_invoices').update({ status }).eq('id', id);
+    if (!error) {
+      setInvoices(invoices.map(inv => inv.id === id ? { ...inv, status } : inv));
+    }
+  };
+
+  const addEmployee = async (employeeData: Omit<Employee, 'id'>) => {
+    const { data, error } = await supabase.from('tb_employees').insert({
+      name: employeeData.name,
+      role: employeeData.role
+    }).select().single();
+    
+    if (data) {
+      setEmployees([...employees, data]);
+    }
+  };
+
+  const deleteEmployee = async (id: string) => {
+    const { error } = await supabase.from('tb_employees').delete().eq('id', id);
+    if (!error) {
+      setEmployees(employees.filter(emp => emp.id !== id));
+    }
+  };
+
+  const addDeviceModel = async (modelData: Omit<DeviceModel, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('tb_device_models').insert(modelData).select().single();
+    if (data && !error) {
+      setDeviceModels([...deviceModels, data].sort((a, b) => a.brand.localeCompare(b.brand)));
+    }
+  };
+
+  const deleteDeviceModel = async (id: string) => {
+    const { error } = await supabase.from('tb_device_models').delete().eq('id', id);
+    if (!error) {
+      setDeviceModels(deviceModels.filter(m => m.id !== id));
+    }
+  };
+
+  const addCommonIssue = async (issueData: Omit<CommonIssue, 'id' | 'created_at'>) => {
+    const { data, error } = await supabase.from('tb_common_issues').insert(issueData).select().single();
+    if (data && !error) {
+      setCommonIssues([...commonIssues, data].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+  };
+
+  const deleteCommonIssue = async (id: string) => {
+    const { error } = await supabase.from('tb_common_issues').delete().eq('id', id);
+    if (!error) {
+      setCommonIssues(commonIssues.filter(i => i.id !== id));
+    }
+  };
+
+  const updateSettings = async (newSettings: ShopSettings) => {
+    // There should be only one row. Let's update it.
+    // If we have an id we could use it, but since we don't store it in local state, we can update using eq on name or just update all
+    // A better approach is to fetch the id first or use the one we fetched
+    const { data: currentSettings } = await supabase.from('tb_shop_settings').select('id').limit(1).single();
+    
+    if (currentSettings) {
+      const { error } = await supabase.from('tb_shop_settings').update({
+        name: newSettings.name,
+        address: newSettings.address,
+        phone: newSettings.phone,
+        email: newSettings.email,
+        terms_and_conditions: newSettings.termsAndConditions
+      }).eq('id', currentSettings.id);
+
+      if (!error) {
+        setSettings(newSettings);
+      }
+    }
+  };
+
+  return (
+    <AppContext.Provider value={{ 
+      invoices, employees, settings, deviceModels, commonIssues, 
+      addInvoice, updateInvoiceStatus, addEmployee, deleteEmployee, updateSettings, 
+      addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
+      loading, user, session 
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useAppContext = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useAppContext must be used within an AppProvider');
+  }
+  return context;
+};
