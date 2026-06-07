@@ -171,7 +171,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>): Promise<boolean> => {
     const currentYear = new Date().getFullYear();
-    const yearInvoices = invoices.filter(inv => inv.invoiceNumber && inv.invoiceNumber.includes(`INV-${currentYear}-`));
+    const yearInvoices = invoices.filter(inv => inv.invoiceNumber && (inv.invoiceNumber.includes(`INV-${currentYear}-`) || inv.invoiceNumber.includes(`Fac-${currentYear}-`)));
     const maxNum = yearInvoices.reduce((max, inv) => {
       const parts = inv.invoiceNumber.split('-');
       if (parts.length >= 3) {
@@ -180,7 +180,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return max;
     }, 0);
-    const invoiceNumber = `INV-${currentYear}-${String(maxNum + 1).padStart(4, '0')}`;
+    const invoiceNumber = `Fac-${currentYear}-${String(maxNum + 1).padStart(4, '0')}`;
     const date = new Date().toISOString();
     
     let customerId = invoiceData.customer.id;
