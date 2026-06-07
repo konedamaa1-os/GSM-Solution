@@ -27,6 +27,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
+  const { isManager } = useAppContext();
   return (
     <div className="app-container">
       <nav className="sidebar no-print">
@@ -55,10 +56,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <FileText size={20} />
             Catalogue
           </NavLink>
-          <NavLink to="/parametres" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Settings size={20} />
-            Paramètres
-          </NavLink>
+          {isManager && (
+            <NavLink to="/parametres" className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Settings size={20} />
+              Paramètres
+            </NavLink>
+          )}
           <div style={{ flex: 1 }}></div>
           <button 
             onClick={() => supabase.auth.signOut()} 
@@ -96,7 +99,7 @@ function App() {
                     <Route path="/facture/:id" element={<InvoiceView />} />
                     <Route path="/clients" element={<Customers />} />
                     <Route path="/catalogue" element={<Catalog />} />
-                    <Route path="/parametres" element={<SettingsPage />} />
+                    {isManager && <Route path="/parametres" element={<SettingsPage />} />}
                   </Routes>
                 </Layout>
               </ProtectedRoute>

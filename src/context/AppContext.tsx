@@ -17,6 +17,8 @@ interface AppContextType extends AppState {
   loading: boolean;
   user: User | null;
   session: Session | null;
+  currentUserRole: string | null;
+  isManager: boolean;
 }
 
 const defaultSettings: ShopSettings = {
@@ -38,6 +40,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+
+  const currentUserRole = React.useMemo(() => {
+    if (!user || !user.email) return null;
+    const emp = employees.find(e => e.email === user.email);
+    return emp ? emp.role : null;
+  }, [user, employees]);
+
+  const isManager = currentUserRole === 'Manager';
 
   const fetchData = async () => {
     setLoading(true);
@@ -77,7 +87,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .order('date', { ascending: false });
 
     if (invoicesData) {
-      const formattedInvoices: Invoice[] = invoicesData.map(inv => ({
+      const formattedInvoices: Invoice[] = invoicesData
+        .filter(inv => inv.customer && inv.device && inv.device.length > 0)
+        .map(inv => ({
         id: inv.id,
         invoiceNumber: inv.invoice_number,
         date: inv.date,
@@ -183,7 +195,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addEmployee = async (employeeData: Omit<Employee, 'id'>) => {
     const { data, error } = await supabase.from('tb_employees').insert({
       name: employeeData.name,
-      role: employeeData.role
+      role: employeeData.role,
+      email: employeeData.email
     }).select().single();
     
     if (data) {
@@ -252,7 +265,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
-      loading, user, session 
+      loading, user, session, currentUserRole, isManager 
     }}>
       {children}
     </AppContext.Provider>

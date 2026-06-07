@@ -7,6 +7,7 @@ const Settings = () => {
   
   const [shopSettings, setShopSettings] = useState(settings);
   const [newEmployeeName, setNewEmployeeName] = useState('');
+  const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [newEmployeeRole, setNewEmployeeRole] = useState('Réparateur');
   const [message, setMessage] = useState('');
 
@@ -19,9 +20,10 @@ const Settings = () => {
 
   const handleAddEmployee = (e: React.FormEvent) => {
     e.preventDefault();
-    if (newEmployeeName.trim()) {
-      addEmployee({ name: newEmployeeName.trim(), role: newEmployeeRole });
+    if (newEmployeeName.trim() && newEmployeeEmail.trim()) {
+      addEmployee({ name: newEmployeeName.trim(), email: newEmployeeEmail.trim(), role: newEmployeeRole });
       setNewEmployeeName('');
+      setNewEmployeeEmail('');
       setNewEmployeeRole('Réparateur');
     }
   };
@@ -119,6 +121,17 @@ const Settings = () => {
               value={newEmployeeName}
               onChange={e => setNewEmployeeName(e.target.value)}
               placeholder="Ex: Jean Dupont"
+              required
+            />
+          </div>
+          <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
+            <label>Email du technicien</label>
+            <input 
+              type="email" 
+              className="form-control" 
+              value={newEmployeeEmail}
+              onChange={e => setNewEmployeeEmail(e.target.value)}
+              placeholder="Ex: jean@tontonboua.com"
               required
             />
           </div>

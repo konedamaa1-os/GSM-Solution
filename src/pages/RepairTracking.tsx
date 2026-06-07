@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { Search, Filter } from 'lucide-react';
 
 const RepairTracking = () => {
-  const { invoices, updateInvoiceStatus, employees } = useAppContext();
+  const { invoices, updateInvoiceStatus, employees, isManager } = useAppContext();
   const [searchTerm, setSearchTerm] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<string>('All');
 
@@ -94,11 +94,12 @@ const RepairTracking = () => {
                     onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
                     className="form-control"
                     style={{ padding: '0.25rem 0.5rem', width: 'auto', backgroundColor: '#f9fafb' }}
+                    disabled={invoice.status === 'Cancelled' && !isManager}
                   >
                     <option value="Pending">En attente</option>
                     <option value="In Progress">En cours</option>
                     <option value="Completed">Terminé</option>
-                    <option value="Cancelled">Annulé</option>
+                    {isManager && <option value="Cancelled">Annulé</option>}
                   </select>
                 </td>
                 <td style={{ padding: '1rem 0' }}>
