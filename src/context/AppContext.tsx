@@ -134,7 +134,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>): Promise<boolean> => {
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, '0')}`;
+    const currentYear = new Date().getFullYear();
+    const yearInvoices = invoices.filter(inv => inv.invoiceNumber && inv.invoiceNumber.includes(`INV-${currentYear}-`));
+    const maxNum = yearInvoices.reduce((max, inv) => {
+      const parts = inv.invoiceNumber.split('-');
+      if (parts.length >= 3) {
+        const num = parseInt(parts[2], 10);
+        return Math.max(max, isNaN(num) ? 0 : num);
+      }
+      return max;
+    }, 0);
+    const invoiceNumber = `INV-${currentYear}-${String(maxNum + 1).padStart(4, '0')}`;
     const date = new Date().toISOString();
     
     let customerId = invoiceData.customer.id;
