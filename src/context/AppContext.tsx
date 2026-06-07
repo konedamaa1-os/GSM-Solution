@@ -5,7 +5,7 @@ import type { Session, User } from '@supabase/supabase-js';
 
 
 interface AppContextType extends AppState {
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => Promise<void>;
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => Promise<boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
   addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
@@ -133,24 +133,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => subscription.unsubscribe();
   }, []);
 
-  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => {
+  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>): Promise<boolean> => {
     const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(4, '0')}`;
     const date = new Date().toISOString();
     
-    // Insert Customer
     let customerId = invoiceData.customer.id;
-    // We check if customer already exists (in real app we might search by phone, but here we just insert)
-    const { data: customerData } = await supabase.from('tb_customers').insert({
-      name: invoiceData.customer.name,
-      phone: invoiceData.customer.phone,
-      email: invoiceData.customer.email,
-      address: invoiceData.customer.address
-    }).select().single();
-    
-    if (customerData) customerId = customerData.id;
+    let finalCustomer = invoiceData.customer;
+
+    // Check if customer exists by phone
+    const { data: existingCustomer } = await supabase.from('tb_customers')
+      .select('*')
+      .eq('phone', invoiceData.customer.phone)
+      .maybeSingle();
+
+    if (existingCustomer) {
+      customerId = existingCustomer.id;
+      finalCustomer = existingCustomer;
+    } else {
+      const { data: customerData, error: custError } = await supabase.from('tb_customers').insert({
+        name: invoiceData.customer.name,
+        phone: invoiceData.customer.phone,
+        email: invoiceData.customer.email,
+        address: invoiceData.customer.address
+      }).select().single();
+      
+      if (custError) {
+        alert("Erreur lors de la création du client: " + custError.message);
+        return false;
+      }
+      if (customerData) {
+        customerId = customerData.id;
+        finalCustomer = customerData;
+      }
+    }
+
+    if (!invoiceData.employeeId) {
+      alert("Erreur: Aucun technicien sélectionné.");
+      return false;
+    }
 
     // Insert Invoice
-    const { data: newInvData } = await supabase.from('tb_invoices').insert({
+    const { data: newInvData, error: invError } = await supabase.from('tb_invoices').insert({
       invoice_number: invoiceNumber,
       date,
       customer_id: customerId,
@@ -161,9 +184,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       notes: invoiceData.notes
     }).select().single();
 
+    if (invError) {
+      alert("Erreur lors de la création de la facture: " + invError.message);
+      return false;
+    }
+
     if (newInvData) {
       // Insert Device
-      const { data: deviceData } = await supabase.from('tb_devices').insert({
+      const { data: deviceData, error: devError } = await supabase.from('tb_devices').insert({
         invoice_id: newInvData.id,
         brand: invoiceData.device.brand,
         model: invoiceData.device.model,
@@ -173,17 +201,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         password: invoiceData.device.password
       }).select().single();
 
+      if (devError) {
+        alert("Erreur lors de l'ajout de l'appareil: " + devError.message);
+        return false;
+      }
+
       // Update local state
       const newInvoice: Invoice = {
         ...invoiceData,
         id: newInvData.id,
         invoiceNumber,
         date,
-        customer: customerData || invoiceData.customer,
+        customer: finalCustomer,
         device: deviceData || invoiceData.device
       };
       setInvoices([newInvoice, ...invoices]);
+      return true;
     }
+    return false;
   };
 
   const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {

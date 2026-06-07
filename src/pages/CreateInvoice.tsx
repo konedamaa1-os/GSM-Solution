@@ -16,11 +16,17 @@ const CreateInvoice = () => {
     deviceIssue: '',
     devicePassword: '',
     deviceAccessories: '',
-    employeeId: employees[0]?.id || '',
+    employeeId: employees.length > 0 ? employees[0].id : '',
     price: '',
     warrantyMonths: '3',
     notes: ''
   });
+
+  React.useEffect(() => {
+    if (!formData.employeeId && employees.length > 0) {
+      setFormData(prev => ({ ...prev, employeeId: employees[0].id }));
+    }
+  }, [employees, formData.employeeId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -42,14 +48,16 @@ const CreateInvoice = () => {
   // Filter models based on selected brand
   const filteredModels = deviceModels.filter(m => !formData.deviceBrand || m.brand === formData.deviceBrand).map(m => m.model);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    addInvoice({
+    const success = await addInvoice({
       customer: {
         id: crypto.randomUUID(),
         name: formData.customerName,
         phone: formData.customerPhone,
+        email: '',
+        address: ''
       },
       device: {
         brand: formData.deviceBrand,
@@ -62,11 +70,13 @@ const CreateInvoice = () => {
       employeeId: formData.employeeId,
       price: Number(formData.price),
       warrantyMonths: Number(formData.warrantyMonths),
-      status: 'Pending',
+      status: 'En cours',
       notes: formData.notes
     });
 
-    navigate('/');
+    if (success) {
+      navigate('/');
+    }
   };
 
   return (
