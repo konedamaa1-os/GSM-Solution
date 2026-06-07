@@ -16,12 +16,18 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import ProfileSelection from './pages/ProfileSelection';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAppContext();
+  const { user, loading, activeEmployee } = useAppContext();
   
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Chargement...</div>;
   if (!user) return <Navigate to="/login" replace />;
+  
+  // If no active profile, force selection (except if we are already rendering the profile selection)
+  if (!activeEmployee && window.location.pathname !== '/profils') {
+    return <Navigate to="/profils" replace />;
+  }
   
   return <>{children}</>;
 };
@@ -69,6 +75,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </NavLink>
           )}
           <div style={{ flex: 1 }}></div>
+          <div style={{ padding: '0 1rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+            Connecté : <strong>{useAppContext().activeEmployee?.name}</strong>
+          </div>
+          <NavLink to="/profils" className="nav-item">
+            <Users size={20} />
+            Changer de profil
+          </NavLink>
           <button 
             onClick={() => supabase.auth.signOut()} 
             className="nav-item" 
@@ -97,17 +110,22 @@ function App() {
             <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
             <Route path="*" element={
               <ProtectedRoute>
-                <Layout>
-                  <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/nouvelle-facture" element={<CreateInvoice />} />
-                    <Route path="/reparations" element={<RepairTracking />} />
-                    <Route path="/facture/:id" element={<InvoiceView />} />
-                    <Route path="/clients" element={<Customers />} />
-                    <Route path="/catalogue" element={<Catalog />} />
-                    <Route path="/parametres" element={<AdminRoute><SettingsPage /></AdminRoute>} />
-                  </Routes>
-                </Layout>
+                <Routes>
+                  <Route path="/profils" element={<ProfileSelection />} />
+                  <Route path="*" element={
+                    <Layout>
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/nouvelle-facture" element={<CreateInvoice />} />
+                        <Route path="/reparations" element={<RepairTracking />} />
+                        <Route path="/facture/:id" element={<InvoiceView />} />
+                        <Route path="/clients" element={<Customers />} />
+                        <Route path="/catalogue" element={<Catalog />} />
+                        <Route path="/parametres" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+                      </Routes>
+                    </Layout>
+                  } />
+                </Routes>
               </ProtectedRoute>
             } />
           </Routes>

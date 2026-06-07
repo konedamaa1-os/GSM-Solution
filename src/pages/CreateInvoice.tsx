@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Save } from 'lucide-react';
 
 const CreateInvoice = () => {
-  const { addInvoice, employees, deviceModels, commonIssues, user } = useAppContext();
+  const { addInvoice, employees, deviceModels, commonIssues, activeEmployee } = useAppContext();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -24,10 +24,9 @@ const CreateInvoice = () => {
 
   React.useEffect(() => {
     if (!formData.employeeId && employees.length > 0) {
-      const loggedInEmployee = user?.email ? employees.find(emp => emp.email === user.email) : undefined;
-      setFormData(prev => ({ ...prev, employeeId: loggedInEmployee?.id || employees[0].id }));
+      setFormData(prev => ({ ...prev, employeeId: activeEmployee?.id || employees[0].id }));
     }
-  }, [employees, formData.employeeId, user]);
+  }, [employees, formData.employeeId, activeEmployee]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
