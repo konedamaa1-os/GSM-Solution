@@ -2,7 +2,6 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { Wrench, FileText, LayoutDashboard, Settings, Users, LogOut } from 'lucide-react';
-import { supabase } from './lib/supabase';
 
 // Components (we will create these next)
 import Dashboard from './pages/Dashboard';
@@ -33,7 +32,7 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { isManager } = useAppContext();
+  const { isManager, logout } = useAppContext();
   return (
     <div className="app-container">
       <nav className="sidebar no-print">
@@ -73,7 +72,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             Connecté : <strong>{useAppContext().activeEmployee?.name || useAppContext().user?.email}</strong>
           </div>
           <button 
-            onClick={() => supabase.auth.signOut()} 
+            onClick={() => logout()} 
             className="nav-item" 
             style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', color: '#ef4444' }}
           >

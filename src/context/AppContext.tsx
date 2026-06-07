@@ -16,6 +16,7 @@ interface AppContextType extends AppState {
   addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at'>) => Promise<void>;
   deleteCommonIssue: (id: string) => Promise<void>;
   forceLoginAsAdmin: () => void;
+  logout: () => Promise<void>;
   loading: boolean;
   user: User | null;
   session: Session | null;
@@ -112,24 +113,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
+    // Check for dev bypass
+    const isDevBypass = localStorage.getItem('dev_bypass') === 'true';
+
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (isDevBypass) {
+        setUser({ email: 'admin@tontonboua.com', id: 'dev-bypass-id' } as any);
+        fetchData();
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
-      if (session) fetchData();
-      else setLoading(false);
+      if (session?.user) {
+        fetchData();
+      } else {
+        setLoading(false);
+      }
     });
 
+    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (localStorage.getItem('dev_bypass') === 'true') return;
+      
       setSession(session);
       setUser(session?.user ?? null);
-      if (session) fetchData();
-      else {
+      if (session?.user) {
+        fetchData();
+      } else {
         // Clear data on logout
         setInvoices([]);
         setEmployees([]);
         setDeviceModels([]);
         setCommonIssues([]);
         setSettings(defaultSettings);
+        setLoading(false);
       }
     });
 
@@ -137,9 +156,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const forceLoginAsAdmin = () => {
+    localStorage.setItem('dev_bypass', 'true');
     setUser({ email: 'admin@tontonboua.com', id: 'dev-bypass-id' } as any);
     setSession({} as any);
     fetchData();
+  };
+
+  const logout = async () => {
+    localStorage.removeItem('dev_bypass');
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
   };
 
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>): Promise<boolean> => {
@@ -339,7 +366,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, forceLoginAsAdmin
+      activeEmployee, forceLoginAsAdmin, logout
     }}>
       {children}
     </AppContext.Provider>
