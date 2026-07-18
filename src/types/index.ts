@@ -1,5 +1,13 @@
+export interface Shop {
+  id: string;
+  owner_id: string;
+  name: string;
+  created_at?: string;
+}
+
 export interface Employee {
   id: string;
+  shop_id: string;
   name: string;
   role: string;
   email?: string;
@@ -7,6 +15,7 @@ export interface Employee {
 
 export interface Customer {
   id: string;
+  shop_id: string;
   name: string;
   phone: string;
   email?: string;
@@ -17,6 +26,7 @@ export type RepairStatus = 'Pending' | 'In Progress' | 'Completed' | 'Cancelled'
 export type PaymentStatus = 'Payé' | 'Impayé';
 
 export interface DeviceInfo {
+  shop_id?: string;
   brand: string;
   model: string;
   serialNumber?: string;
@@ -27,6 +37,7 @@ export interface DeviceInfo {
 
 export interface Invoice {
   id: string;
+  shop_id: string;
   invoiceNumber: string;
   date: string;
   customer: Customer;
@@ -42,6 +53,8 @@ export interface Invoice {
 export type SubscriptionPlan = 'Standard' | 'Professionnelle';
 
 export interface ShopSettings {
+  id?: string;
+  shop_id: string;
   name: string;
   address: string;
   phone: string;
@@ -54,6 +67,7 @@ export interface ShopSettings {
 
 export interface DeviceModel {
   id: string;
+  shop_id: string;
   brand: string;
   model: string;
   created_at?: string;
@@ -61,6 +75,7 @@ export interface DeviceModel {
 
 export interface CommonIssue {
   id: string;
+  shop_id: string;
   name: string;
   description?: string;
   default_price?: number;
@@ -68,9 +83,10 @@ export interface CommonIssue {
 }
 
 export interface AppState {
+  currentShop: Shop | null;
   invoices: Invoice[];
   employees: Employee[];
-  settings: ShopSettings;
+  settings: ShopSettings | null;
   deviceModels: DeviceModel[];
   commonIssues: CommonIssue[];
 }

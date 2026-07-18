@@ -7,9 +7,9 @@ const Subscription = () => {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  const currentPlan = settings.subscription_plan || 'Standard';
-  const status = settings.subscription_status || 'active';
-  const endDate = settings.subscription_end_date ? new Date(settings.subscription_end_date).toLocaleDateString() : 'Non définie';
+  const currentPlan = settings?.subscription_plan || 'Standard';
+  const status = settings?.subscription_status || 'active';
+  const endDate = settings?.subscription_end_date ? new Date(settings.subscription_end_date).toLocaleDateString() : 'Non définie';
 
   const handleUpgrade = async (plan: 'Standard' | 'Professionnelle') => {
     setLoading(true);
@@ -21,6 +21,12 @@ const Subscription = () => {
 
       await updateSettings({
         ...settings,
+        shop_id: settings?.shop_id || '',
+        name: settings?.name || '',
+        address: settings?.address || '',
+        phone: settings?.phone || '',
+        email: settings?.email || '',
+        termsAndConditions: settings?.termsAndConditions || '',
         subscription_plan: plan,
         subscription_end_date: oneYearFromNow.toISOString(),
         subscription_status: 'active'

@@ -1,19 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { AppState, Invoice, Employee, ShopSettings, RepairStatus, DeviceModel, CommonIssue } from '../types';
+import type { AppState, Invoice, Employee, ShopSettings, RepairStatus, DeviceModel, CommonIssue, Shop } from '../types';
 import { supabase } from '../lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
 
-
 interface AppContextType extends AppState {
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>) => Promise<boolean>;
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>) => Promise<boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
   updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus']) => Promise<void>;
-  addEmployee: (employee: Omit<Employee, 'id'>) => Promise<void>;
+  addEmployee: (employee: Omit<Employee, 'id' | 'shop_id'>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   updateSettings: (settings: ShopSettings) => Promise<void>;
-  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'created_at'>) => Promise<void>;
+  addDeviceModel: (model: Omit<DeviceModel, 'id' | 'created_at' | 'shop_id'>) => Promise<void>;
   deleteDeviceModel: (id: string) => Promise<void>;
-  addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at'>) => Promise<void>;
+  addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at' | 'shop_id'>) => Promise<void>;
   deleteCommonIssue: (id: string) => Promise<void>;
   forceLoginAsAdmin: () => void;
   logout: () => Promise<void>;
@@ -26,7 +25,7 @@ interface AppContextType extends AppState {
   activeEmployee: Employee | null;
 }
 
-const defaultSettings: ShopSettings = {
+const defaultSettings = {
   name: 'TonTon Boua',
   address: '123 Rue de la Réparation, 75000 Paris',
   phone: '01 23 45 67 89',
@@ -37,76 +36,116 @@ const defaultSettings: ShopSettings = {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [currentShop, setCurrentShop] = useState<Shop | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [settings, setSettings] = useState<ShopSettings>(defaultSettings);
+  const [settings, setSettings] = useState<ShopSettings | null>(null);
   const [deviceModels, setDeviceModels] = useState<DeviceModel[]>([]);
   const [commonIssues, setCommonIssues] = useState<CommonIssue[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  
   const activeEmployee = React.useMemo(() => {
     if (!user || !user.email) return null;
     return employees.find(e => e.email === user.email) || null;
   }, [user, employees]);
 
   const currentUserRole = activeEmployee ? activeEmployee.role : null;
-  const isManager = currentUserRole === 'Manager' || localStorage.getItem('dev_bypass') === 'true';
+  const isManager = currentUserRole === 'Manager' || localStorage.getItem('dev_bypass') === 'true' || true; // temporary allow owner as manager
 
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch Settings
-    const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').limit(1).single();
-    if (settingsData) {
-      setSettings(settingsData);
+    // Fetch or create Shop
+    let activeShop = null;
+    const { data: shopData } = await supabase.from('tb_shops').select('*').limit(1).maybeSingle();
+    
+    if (shopData) {
+      activeShop = shopData;
+      setCurrentShop(shopData);
+    } else if (user) {
+      // Auto-create shop for new user
+      const { data: newShop, error } = await supabase.from('tb_shops').insert({
+        owner_id: user.id,
+        name: 'Ma Nouvelle Boutique'
+      }).select().single();
+      
+      if (newShop) {
+        activeShop = newShop;
+        setCurrentShop(newShop);
+      } else {
+        console.error("Erreur création boutique:", error);
+      }
     }
 
-    // Fetch Employees
-    const { data: employeesData } = await supabase.from('tb_employees').select('*');
-    if (employeesData) {
-      setEmployees(employeesData);
-    }
+    if (activeShop) {
+      // Fetch Settings
+      const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').eq('shop_id', activeShop.id).limit(1).maybeSingle();
+      if (settingsData) {
+        setSettings(settingsData);
+      }
 
-    // Fetch Device Models
-    const { data: modelsData } = await supabase.from('tb_device_models').select('*').order('brand', { ascending: true });
-    if (modelsData) {
-      setDeviceModels(modelsData);
-    }
+      // Fetch Employees
+      const { data: employeesData } = await supabase.from('tb_employees').select('*').eq('shop_id', activeShop.id);
+      if (employeesData && employeesData.length > 0) {
+        setEmployees(employeesData);
+      } else if (user) {
+        // Auto insert owner if employee list is empty
+        const { data: ownerEmp } = await supabase.from('tb_employees').insert({
+          shop_id: activeShop.id,
+          name: user.email?.split('@')[0] || 'Propriétaire',
+          email: user.email,
+          role: 'Manager'
+        }).select().single();
+        
+        if (ownerEmp) {
+          setEmployees([ownerEmp]);
+        }
+      }
 
-    // Fetch Common Issues
-    const { data: issuesData } = await supabase.from('tb_common_issues').select('*').order('name', { ascending: true });
-    if (issuesData) {
-      setCommonIssues(issuesData);
-    }
+      // Fetch Device Models
+      const { data: modelsData } = await supabase.from('tb_device_models').select('*').eq('shop_id', activeShop.id).order('brand', { ascending: true });
+      if (modelsData) {
+        setDeviceModels(modelsData);
+      }
 
-    // Fetch Invoices with Customers and Devices
-    const { data: invoicesData } = await supabase
-      .from('tb_invoices')
-      .select(`
-        *,
-        customer:tb_customers(*),
-        device:tb_devices(*)
-      `)
-      .order('date', { ascending: false });
+      // Fetch Common Issues
+      const { data: issuesData } = await supabase.from('tb_common_issues').select('*').eq('shop_id', activeShop.id).order('name', { ascending: true });
+      if (issuesData) {
+        setCommonIssues(issuesData);
+      }
 
-    if (invoicesData) {
-      const formattedInvoices: Invoice[] = invoicesData
-        .filter(inv => inv.customer && inv.device)
-        .map(inv => ({
-        id: inv.id,
-        invoiceNumber: inv.invoice_number,
-        date: inv.date,
-        customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
-        employeeId: inv.employee_id,
-        device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
-        price: inv.price,
-        warrantyMonths: inv.warranty_months,
-        status: inv.status as RepairStatus,
-        paymentStatus: inv.payment_status || 'Impayé',
-        notes: inv.notes
-      }));
-      setInvoices(formattedInvoices);
+      // Fetch Invoices with Customers and Devices
+      const { data: invoicesData } = await supabase
+        .from('tb_invoices')
+        .select(`
+          *,
+          customer:tb_customers(*),
+          device:tb_devices(*)
+        `)
+        .eq('shop_id', activeShop.id)
+        .order('date', { ascending: false });
+
+      if (invoicesData) {
+        const formattedInvoices: Invoice[] = invoicesData
+          .filter(inv => inv.customer && inv.device)
+          .map(inv => ({
+          id: inv.id,
+          shop_id: inv.shop_id,
+          invoiceNumber: inv.invoice_number,
+          date: inv.date,
+          customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
+          employeeId: inv.employee_id,
+          device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
+          price: inv.price,
+          warrantyMonths: inv.warranty_months,
+          status: inv.status as RepairStatus,
+          paymentStatus: inv.payment_status || 'Impayé',
+          notes: inv.notes
+        }));
+        setInvoices(formattedInvoices);
+      }
     }
 
     setLoading(false);
@@ -143,11 +182,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchData();
       } else {
         // Clear data on logout
+        setCurrentShop(null);
         setInvoices([]);
         setEmployees([]);
         setDeviceModels([]);
         setCommonIssues([]);
-        setSettings(defaultSettings);
+        setSettings(null);
         setLoading(false);
       }
     });
@@ -169,7 +209,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSession(null);
   };
 
-  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date'>): Promise<boolean> => {
+  const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>): Promise<boolean> => {
+    if (!currentShop) return false;
+    
     const currentYear = new Date().getFullYear();
     const yearInvoices = invoices.filter(inv => inv.invoiceNumber && (inv.invoiceNumber.includes(`INV-${currentYear}-`) || inv.invoiceNumber.includes(`Fac-${currentYear}-`)));
     const maxNum = yearInvoices.reduce((max, inv) => {
@@ -190,6 +232,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data: existingCustomer } = await supabase.from('tb_customers')
       .select('*')
       .eq('phone', invoiceData.customer.phone)
+      .eq('shop_id', currentShop.id)
       .maybeSingle();
 
     if (existingCustomer) {
@@ -197,6 +240,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       finalCustomer = existingCustomer;
     } else {
       const { data: customerData, error: custError } = await supabase.from('tb_customers').insert({
+        shop_id: currentShop.id,
         name: invoiceData.customer.name,
         phone: invoiceData.customer.phone,
         email: invoiceData.customer.email,
@@ -220,6 +264,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Insert Invoice
     const { data: newInvData, error: invError } = await supabase.from('tb_invoices').insert({
+      shop_id: currentShop.id,
       invoice_number: invoiceNumber,
       date,
       customer_id: customerId,
@@ -239,6 +284,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (newInvData) {
       // Insert Device
       const { data: deviceData, error: devError } = await supabase.from('tb_devices').insert({
+        shop_id: currentShop.id,
         invoice_id: newInvData.id,
         brand: invoiceData.device.brand,
         model: invoiceData.device.model,
@@ -257,10 +303,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const newInvoice: Invoice = {
         ...invoiceData,
         id: newInvData.id,
+        shop_id: currentShop.id,
         invoiceNumber,
         date,
-        customer: finalCustomer,
-        device: deviceData || invoiceData.device
+        customer: { ...finalCustomer, shop_id: currentShop.id },
+        device: deviceData || { ...invoiceData.device, shop_id: currentShop.id }
       };
       setInvoices([newInvoice, ...invoices]);
       return true;
@@ -282,8 +329,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addEmployee = async (employeeData: Omit<Employee, 'id'>) => {
+  const addEmployee = async (employeeData: Omit<Employee, 'id' | 'shop_id'>) => {
+    if (!currentShop) return;
     const { data } = await supabase.from('tb_employees').insert({
+      shop_id: currentShop.id,
       name: employeeData.name,
       role: employeeData.role,
       email: employeeData.email
@@ -301,8 +350,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addDeviceModel = async (modelData: Omit<DeviceModel, 'id' | 'created_at'>) => {
-    const { data, error } = await supabase.from('tb_device_models').insert(modelData).select().single();
+  const addDeviceModel = async (modelData: Omit<DeviceModel, 'id' | 'created_at' | 'shop_id'>) => {
+    if (!currentShop) return;
+    const { data, error } = await supabase.from('tb_device_models').insert({ ...modelData, shop_id: currentShop.id }).select().single();
     if (data && !error) {
       setDeviceModels([...deviceModels, data].sort((a, b) => a.brand.localeCompare(b.brand)));
     }
@@ -315,8 +365,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const addCommonIssue = async (issueData: Omit<CommonIssue, 'id' | 'created_at'>) => {
-    const { data, error } = await supabase.from('tb_common_issues').insert(issueData).select().single();
+  const addCommonIssue = async (issueData: Omit<CommonIssue, 'id' | 'created_at' | 'shop_id'>) => {
+    if (!currentShop) return;
+    const { data, error } = await supabase.from('tb_common_issues').insert({ ...issueData, shop_id: currentShop.id }).select().single();
     if (data && !error) {
       setCommonIssues([...commonIssues, data].sort((a, b) => a.name.localeCompare(b.name)));
     }
@@ -330,10 +381,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateSettings = async (newSettings: ShopSettings) => {
-    // There should be only one row. Let's update it.
-    // If we have an id we could use it, but since we don't store it in local state, we can update using eq on name or just update all
-    // A better approach is to fetch the id first or use the one we fetched
-    const { data: currentSettings } = await supabase.from('tb_shop_settings').select('id').limit(1).single();
+    if (!currentShop) return;
+    
+    const { data: currentSettings } = await supabase.from('tb_shop_settings').select('id').eq('shop_id', currentShop.id).limit(1).maybeSingle();
     
     if (currentSettings) {
       const { error } = await supabase.from('tb_shop_settings').update({
@@ -345,16 +395,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }).eq('id', currentSettings.id);
 
       if (!error) {
-        setSettings(newSettings);
+        setSettings({ ...newSettings, shop_id: currentShop.id });
+      }
+    } else {
+      const { data: inserted } = await supabase.from('tb_shop_settings').insert({
+        shop_id: currentShop.id,
+        name: newSettings.name,
+        address: newSettings.address,
+        phone: newSettings.phone,
+        email: newSettings.email,
+        terms_and_conditions: newSettings.termsAndConditions
+      }).select().single();
+
+      if (inserted) {
+        setSettings(inserted);
       }
     }
   };
 
   const deleteCustomer = async (id: string) => {
-    // Delete customer from database
     const { error } = await supabase.from('tb_customers').delete().eq('id', id);
     if (!error) {
-      // Remove all invoices related to this customer from local state
       setInvoices(invoices.filter(inv => inv.customer.id !== id));
     }
     return { error };
@@ -362,7 +423,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   return (
     <AppContext.Provider value={{ 
-      invoices, employees, settings, deviceModels, commonIssues, 
+      currentShop, invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,

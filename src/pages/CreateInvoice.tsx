@@ -16,7 +16,7 @@ const CreateInvoice = () => {
     deviceIssue: '',
     devicePassword: '',
     deviceAccessories: '',
-    employeeId: employees.length > 0 ? employees[0].id : '',
+    employeeId: activeEmployee ? activeEmployee.id : (employees.length > 0 ? employees[0].id : ''),
     price: '',
     warrantyMonths: '3',
     notes: ''
@@ -105,7 +105,7 @@ const CreateInvoice = () => {
     }
   };
 
-  const currentPlan = settings.subscription_plan || 'Standard';
+  const currentPlan = settings?.subscription_plan || 'Standard';
   const isLimitReached = currentPlan === 'Standard' && invoices.length >= 20;
 
   if (isLimitReached) {
@@ -196,6 +196,7 @@ const CreateInvoice = () => {
             <div className="form-group">
               <label className="form-label">Technicien / Réceptionné par *</label>
               <select name="employeeId" required className="form-control" value={formData.employeeId} onChange={handleChange}>
+                <option value="" disabled>Sélectionner...</option>
                 {employees.map(emp => (
                   <option key={emp.id} value={emp.id}>{emp.name} ({emp.role})</option>
                 ))}

@@ -5,7 +5,14 @@ import { Save, Plus, Trash2, User, Store } from 'lucide-react';
 const Settings = () => {
   const { settings, updateSettings, employees, addEmployee, deleteEmployee } = useAppContext();
   
-  const [shopSettings, setShopSettings] = useState(settings);
+  const [shopSettings, setShopSettings] = useState(settings || {
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    termsAndConditions: '',
+    shop_id: ''
+  });
   const [newEmployeeName, setNewEmployeeName] = useState('');
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
   const [newEmployeeRole, setNewEmployeeRole] = useState('Réparateur');
