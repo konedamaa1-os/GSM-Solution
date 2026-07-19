@@ -293,3 +293,116 @@ textarea.form-control {
     display: none;
   }
 }
+
+/* Guide Modal Styles */
+.btn-brown-guide {
+  background: #78350f;
+  color: #ffffff;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(120, 53, 15, 0.25);
+  margin: 1rem 1.5rem 0.5rem 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.btn-brown-guide:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(120, 53, 15, 0.35);
+  background: #5b2508;
+}
+.btn-brown-guide:active {
+  transform: translateY(0);
+}
+
+.guide-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 11000;
+  padding: 20px;
+}
+.guide-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 30px;
+  width: 100%;
+  max-width: 780px;
+  box-shadow: 0 20px 48px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+.guide-steps-container {
+  display: flex;
+  gap: 20px;
+  min-height: 280px;
+}
+.guide-menu {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-right: 1px solid #e2e8f0;
+  padding-right: 14px;
+}
+.guide-menu-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  text-align: left;
+  font-weight: 500;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+  color: #475569;
+}
+.guide-menu-btn.active {
+  background: #eef2f6;
+  color: #4f46e5;
+  font-weight: 600;
+}
+.guide-content {
+  flex: 2 1 300px;
+  padding-left: 6px;
+}
+.guide-text {
+  font-size: 14.5px;
+  color: #334155;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+.guide-list {
+  padding-left: 20px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #475569;
+  line-height: 1.7;
+}
+
+@media (max-width: 768px) {
+  .guide-steps-container {
+    flex-direction: column;
+  }
+  .guide-menu {
+    border-right: none;
+    border-bottom: 1px solid #e2e8f0;
+    padding-right: 0;
+    padding-bottom: 14px;
+  }
+}

@@ -25,7 +25,7 @@ interface AppContextType extends AppState {
   activeEmployee: Employee | null;
 }
 
-const defaultSettings = {
+export const defaultSettings = {
   name: 'TonTon Boua',
   address: '123 Rue de la Réparation, 75000 Paris',
   phone: '01 23 45 67 89',

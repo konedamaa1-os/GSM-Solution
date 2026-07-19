@@ -1,73 +1,16 @@
-# React + TypeScript + Vite
+# GSM Solution - Application de Gestion de Réparations Multi-Boutiques
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+GSM Solution est une plateforme SaaS complète conçue pour la gestion des boutiques de réparation d'appareils électroniques (téléphones, ordinateurs, tablettes, etc.). Elle permet le suivi des réparations, la création de factures, la gestion des clients, des techniciens, et un catalogue de pannes récurrentes, le tout avec un système de cloisonnement multi-boutiques (multi-tenant) basé sur Supabase.
 
-Currently, two official plugins are available:
+## 🚀 Démarrage Rapide
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Pour savoir comment installer, configurer la base de données Supabase, et lancer le projet localement, veuillez consulter le guide complet :
 
-## React Compiler
+👉 **[Guide de Démarrage (STARTUP_GUIDE.md)](file:///c:/Users/koned/Mon%20Drive/SaaS/GSM%20SOLUTION/STARTUP_GUIDE.md)**
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠 Technologies utilisées
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Frontend** : React 19, TypeScript, Vite, React Router DOM v7
+- **Styling** : CSS Custom Properties (Variables CSS) pour les thèmes clair/sombre et une interface premium
+- **Backend & Database** : Supabase (PostgreSQL) avec Row Level Security (RLS)
+- **Icons** : Lucide React
