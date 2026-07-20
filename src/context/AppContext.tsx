@@ -194,13 +194,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => subscription.unsubscribe();
   }, []);
-
   const forceLoginAsAdmin = () => {
     localStorage.setItem('dev_bypass', 'true');
     setUser({ email: 'admin@tontonboua.com', id: 'dev-bypass-id' } as any);
     setSession({} as any);
     fetchData();
   };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).forceLoginAsAdmin = forceLoginAsAdmin;
+    }
+  }, []);
 
   const logout = async () => {
     localStorage.removeItem('dev_bypass');
