@@ -16,6 +16,7 @@ import SignUp from './pages/SignUp';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Subscription from './pages/Subscription';
+import SuperAdmin from './pages/SuperAdmin';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAppContext();
@@ -29,6 +30,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isManager } = useAppContext();
   if (!isManager) return <Navigate to="/" replace />;
+  return <>{children}</>;
+};
+
+const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isSuperAdmin } = useAppContext();
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 };
 
@@ -175,7 +182,7 @@ const GuideModal: React.FC<GuideModalProps> = ({ onClose }) => {
 };
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
-  const { isManager, logout, activeEmployee, user } = useAppContext();
+  const { isManager, logout, activeEmployee, user, isSuperAdmin, allShops, switchShop, currentShop } = useAppContext();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [showGuide, setShowGuide] = React.useState(false);
 
@@ -213,6 +220,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <X size={24} color="var(--text-secondary)" />
           </button>
         </div>
+
+        {/* Super Admin Shop Switcher */}
+        {isSuperAdmin && allShops.length > 0 && (
+          <div style={{ padding: '0 1rem 1rem 1rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1rem' }}>
+            <label style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.5rem' }}>
+              🔧 Boutique Active (Super Admin)
+            </label>
+            <select 
+              value={currentShop?.id || ''} 
+              onChange={(e) => switchShop(e.target.value)}
+              className="form-control"
+              style={{ width: '100%', padding: '0.5rem', borderRadius: '6px', fontSize: '0.875rem' }}
+            >
+              {allShops.map(shop => (
+                <option key={shop.id} value={shop.id}>{shop.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Quick Start Guide Button */}
         <button className="btn-brown-guide" onClick={() => { closeMobileMenu(); setShowGuide(true); }}>
@@ -252,6 +278,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </NavLink>
             </>
           )}
+          {isSuperAdmin && (
+            <NavLink to="/super-admin" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Settings size={20} />
+              Super Admin
+            </NavLink>
+          )}
           <div style={{ flex: 1 }}></div>
           <div style={{ padding: '0 1rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
             Connecté : <strong>{activeEmployee?.name || user?.email}</strong>
@@ -284,6 +316,13 @@ function App() {
             <Route path="/inscription" element={<SignUp />} />
             <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
             <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
+            <Route path="/super-admin" element={
+              <ProtectedRoute>
+                <SuperAdminRoute>
+                  <SuperAdmin />
+                </SuperAdminRoute>
+              </ProtectedRoute>
+            } />
             <Route path="*" element={
               <ProtectedRoute>
                 <Layout>

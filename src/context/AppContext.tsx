@@ -23,6 +23,10 @@ interface AppContextType extends AppState {
   isManager: boolean;
   deleteCustomer: (id: string) => Promise<{ error: any }>;
   activeEmployee: Employee | null;
+  isSuperAdmin: boolean;
+  allShops: Shop[];
+  switchShop: (shopId: string) => Promise<void>;
+  createShopWithManager: (shopName: string, managerName: string, managerEmail: string, managerPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const defaultSettings = {
@@ -45,6 +49,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [allShops, setAllShops] = useState<Shop[]>([]);
   
   const activeEmployee = React.useMemo(() => {
     if (!user || !user.email) return null;
@@ -52,7 +57,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, employees]);
 
   const currentUserRole = activeEmployee ? activeEmployee.role : null;
-  const isManager = currentUserRole === 'Manager' || localStorage.getItem('dev_bypass') === 'true' || true; // temporary allow owner as manager
+  const isSuperAdmin = user?.email === 'admin.tontonboua@gmail.com';
+  const isManager = currentUserRole === 'Manager' || 
+                    (currentShop && user && currentShop.owner_id === user.id) || 
+                    localStorage.getItem('dev_bypass') === 'true' ||
+                    user?.email === 'admin.tontonboua@gmail.com';
 
   const fetchData = async () => {
     setLoading(true);
@@ -146,6 +155,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }));
         setInvoices(formattedInvoices);
       }
+    }
+
+    if (user?.email === 'admin.tontonboua@gmail.com') {
+      const { data: shops } = await supabase.from('tb_shops').select('*');
+      setAllShops(shops || []);
     }
 
     setLoading(false);
@@ -426,13 +440,127 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { error };
   };
 
+  const switchShop = async (shopId: string) => {
+    setLoading(true);
+    const { data: shop } = await supabase.from('tb_shops').select('*').eq('id', shopId).single();
+    if (shop) {
+      setCurrentShop(shop);
+      
+      const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').eq('shop_id', shop.id).limit(1).maybeSingle();
+      setSettings(settingsData);
+
+      const { data: employeesData } = await supabase.from('tb_employees').select('*').eq('shop_id', shop.id);
+      setEmployees(employeesData || []);
+
+      const { data: modelsData } = await supabase.from('tb_device_models').select('*').eq('shop_id', shop.id).order('brand', { ascending: true });
+      setDeviceModels(modelsData || []);
+
+      const { data: issuesData } = await supabase.from('tb_common_issues').select('*').eq('shop_id', shop.id).order('name', { ascending: true });
+      setCommonIssues(issuesData || []);
+
+      const { data: invoicesData } = await supabase
+        .from('tb_invoices')
+        .select(`
+          *,
+          customer:tb_customers(*),
+          device:tb_devices(*)
+        `)
+        .eq('shop_id', shop.id)
+        .order('date', { ascending: false });
+
+      if (invoicesData) {
+        const formattedInvoices: Invoice[] = invoicesData
+          .filter(inv => inv.customer && inv.device)
+          .map(inv => ({
+            id: inv.id,
+            shop_id: inv.shop_id,
+            invoiceNumber: inv.invoice_number,
+            date: inv.date,
+            customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
+            employeeId: inv.employee_id,
+            device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
+            price: inv.price,
+            warrantyMonths: inv.warranty_months,
+            status: inv.status as RepairStatus,
+            paymentStatus: inv.payment_status || 'Impayé',
+            notes: inv.notes
+          }));
+        setInvoices(formattedInvoices);
+      } else {
+        setInvoices([]);
+      }
+    }
+    setLoading(false);
+  };
+
+  const createShopWithManager = async (shopName: string, managerName: string, managerEmail: string, managerPassword: string) => {
+    if (!user) return { success: false, error: 'Utilisateur non connecté.' };
+    
+    // 1. Create the user in auth schema using RPC
+    const { data: managerUserId, error: rpcError } = await supabase.rpc('create_user_admin', {
+      new_email: managerEmail,
+      new_password: managerPassword
+    });
+
+    if (rpcError || !managerUserId) {
+      console.error("Error creating user via RPC:", rpcError);
+      return { success: false, error: `Erreur création compte utilisateur : ${rpcError?.message || 'Inconnue'}` };
+    }
+
+    // 2. Insert Shop with the newly created manager as owner
+    const { data: shop, error: shopError } = await supabase.from('tb_shops').insert({
+      name: shopName,
+      owner_id: managerUserId
+    }).select().single();
+
+    if (shopError || !shop) {
+      console.error("Error creating shop:", shopError);
+      return { success: false, error: `Erreur création boutique: ${shopError?.message || 'Inconnue'}` };
+    }
+
+    // 3. Insert Settings
+    const { error: settingsError } = await supabase.from('tb_shop_settings').insert({
+      shop_id: shop.id,
+      name: shopName,
+      address: 'Adresse de la boutique',
+      phone: '00000000',
+      email: managerEmail,
+      terms_and_conditions: 'Garantie de 3 mois sur toutes les réparations.'
+    });
+
+    if (settingsError) {
+      console.error("Error creating shop settings:", settingsError);
+      await supabase.from('tb_shops').delete().eq('id', shop.id);
+      return { success: false, error: `Erreur création paramètres: ${settingsError.message}` };
+    }
+
+    // 4. Insert Employee
+    const { error: empError } = await supabase.from('tb_employees').insert({
+      shop_id: shop.id,
+      name: managerName,
+      email: managerEmail,
+      role: 'Manager'
+    });
+
+    if (empError) {
+      console.error("Error creating manager employee:", empError);
+      await supabase.from('tb_shops').delete().eq('id', shop.id);
+      return { success: false, error: `Erreur création manager: ${empError.message}` };
+    }
+
+    // Refresh shops list
+    const { data: shops } = await supabase.from('tb_shops').select('*');
+    setAllShops(shops || []);
+    return { success: true };
+  };
+
   return (
     <AppContext.Provider value={{ 
       currentShop, invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, forceLoginAsAdmin, logout
+      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager
     }}>
       {children}
     </AppContext.Provider>
