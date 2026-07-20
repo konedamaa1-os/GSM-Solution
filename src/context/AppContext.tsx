@@ -57,11 +57,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, employees]);
 
   const currentUserRole = activeEmployee ? activeEmployee.role : null;
-  const isSuperAdmin = user?.email === 'admin.tontonboua@gmail.com';
+  const isSuperAdmin = user?.email === 'konedamaa@gmail.com';
   const isManager = currentUserRole === 'Manager' || 
                     (currentShop && user && currentShop.owner_id === user.id) || 
                     localStorage.getItem('dev_bypass') === 'true' ||
-                    user?.email === 'admin.tontonboua@gmail.com';
+                    user?.email === 'konedamaa@gmail.com';
 
   const fetchData = async () => {
     setLoading(true);
@@ -157,7 +157,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    if (user?.email === 'admin.tontonboua@gmail.com') {
+    if (user?.email === 'konedamaa@gmail.com') {
       const { data: shops } = await supabase.from('tb_shops').select('*');
       setAllShops(shops || []);
     }

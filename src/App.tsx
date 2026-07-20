@@ -17,6 +17,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Subscription from './pages/Subscription';
 import SuperAdmin from './pages/SuperAdmin';
+import LandingPage from './pages/LandingPage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAppContext();
@@ -307,6 +308,26 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const HomeOrDashboard = () => {
+  const { user, loading } = useAppContext();
+  
+  if (loading) {
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0f172a', color: 'white' }}>Chargement...</div>;
+  }
+  
+  if (user) {
+    return (
+      <ProtectedRoute>
+        <Layout>
+          <Dashboard />
+        </Layout>
+      </ProtectedRoute>
+    );
+  }
+  
+  return <LandingPage />;
+};
+
 function App() {
   return (
     <AppProvider>
@@ -323,11 +344,11 @@ function App() {
                 </SuperAdminRoute>
               </ProtectedRoute>
             } />
+            <Route path="/" element={<HomeOrDashboard />} />
             <Route path="*" element={
               <ProtectedRoute>
                 <Layout>
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
                     <Route path="/nouvelle-facture" element={<CreateInvoice />} />
                     <Route path="/reparations" element={<RepairTracking />} />
                     <Route path="/facture/:id" element={<InvoiceView />} />
@@ -335,6 +356,7 @@ function App() {
                     <Route path="/catalogue" element={<Catalog />} />
                     <Route path="/abonnement" element={<AdminRoute><Subscription /></AdminRoute>} />
                     <Route path="/parametres" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Layout>
               </ProtectedRoute>

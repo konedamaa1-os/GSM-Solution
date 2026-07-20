@@ -58,7 +58,7 @@ CREATE POLICY "Access shops" ON tb_shops
     OR
     public.is_shop_employee(id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les factures
@@ -70,7 +70,7 @@ CREATE POLICY "Access invoices based on shop and employees" ON tb_invoices
     OR
     public.is_shop_employee(shop_id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les clients
@@ -82,7 +82,7 @@ CREATE POLICY "Access customers based on shop and employees" ON tb_customers
     OR
     public.is_shop_employee(shop_id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les appareils
@@ -94,7 +94,7 @@ CREATE POLICY "Access devices based on shop and employees" ON tb_devices
     OR
     public.is_shop_employee(shop_id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les employés
@@ -106,7 +106,7 @@ CREATE POLICY "Access employees based on shop and employees" ON tb_employees
     OR
     email = auth.jwt() ->> 'email'
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les modèles d'appareils
@@ -118,7 +118,7 @@ CREATE POLICY "Access models based on shop and employees" ON tb_device_models
     OR
     public.is_shop_employee(shop_id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les pannes courantes
@@ -130,7 +130,7 @@ CREATE POLICY "Access issues based on shop and employees" ON tb_common_issues
     OR
     public.is_shop_employee(shop_id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 -- Pour les paramètres de la boutique
@@ -142,7 +142,7 @@ CREATE POLICY "Access settings based on shop and employees" ON tb_shop_settings
     OR
     public.is_shop_employee(shop_id, auth.jwt() ->> 'email')
     OR
-    auth.jwt() ->> 'email' = 'admin.tontonboua@gmail.com'
+    auth.jwt() ->> 'email' = 'konedamaa@gmail.com'
   );
 
 
@@ -156,7 +156,7 @@ DECLARE
   new_user_id uuid;
 BEGIN
   -- 1. Security Check: Only allow Super Admin
-  IF auth.jwt() ->> 'email' <> 'admin.tontonboua@gmail.com' THEN
+  IF auth.jwt() ->> 'email' <> 'konedamaa@gmail.com' THEN
     RAISE EXCEPTION 'Seul le Super Admin peut créer des utilisateurs.';
   END IF;
 
