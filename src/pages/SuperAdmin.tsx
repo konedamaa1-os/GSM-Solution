@@ -5,7 +5,7 @@ import type { Shop } from '../types';
 import { 
   Plus, Store, ArrowRight, CheckCircle, LogOut, LayoutDashboard, Shield, 
   Globe, Users, FileText, Smartphone, DollarSign, Activity, Eye, 
-  Search, RefreshCw, Key, Copy, Check, Lock, Edit3, AlertCircle, Trash2
+  Search, RefreshCw, Key, Copy, Check, Lock, Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 

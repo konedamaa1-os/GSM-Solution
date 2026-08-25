@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
 import { 
-  Wrench, Shield, Crown, Briefcase, Eye, EyeOff, 
-  Store, CheckCircle2, ArrowRight, Sparkles, Check
+  Wrench, Shield, Eye, EyeOff, 
+  CheckCircle2, ArrowRight, Sparkles
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
@@ -109,14 +109,13 @@ const ROLES: RoleConfig[] = [
 ];
 
 const Login = () => {
-  const { forceLoginAsAdmin, allShops, currentShop, domainShop } = useAppContext();
+  const { forceLoginAsAdmin, currentShop, domainShop } = useAppContext();
   const navigate = useNavigate();
 
   const [selectedRole, setSelectedRole] = useState<RoleType>('superadmin');
   const [email, setEmail] = useState('konedamaa@gmail.com');
   const [password, setPassword] = useState('Madouu1966');
   const [showPassword, setShowPassword] = useState(false);
-  const [selectedShopId, setSelectedShopId] = useState<string>('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

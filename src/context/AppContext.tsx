@@ -31,6 +31,7 @@ interface AppContextType extends AppState {
   allShops: Shop[];
   switchShop: (shopId: string) => Promise<void>;
   createShopWithManager: (shopName: string, managerName: string, managerEmail: string, managerPassword: string, slug?: string, customDomain?: string) => Promise<{ success: boolean; error?: string }>;
+  deleteShop: (shopId: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const defaultSettings = {
