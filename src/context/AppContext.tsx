@@ -149,10 +149,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let activeShop: Shop | null = null;
 
     if (dInfo.slugOrDomain) {
+      const subSlug = dInfo.slugOrDomain.split('.')[0];
       const { data: matchedShop } = await supabase
         .from('tb_shops')
         .select('*')
-        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain}`)
+        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain},slug.eq.${subSlug},custom_domain.eq.${subSlug}.gsmsolution.xyz`)
         .maybeSingle();
 
       if (matchedShop) {
@@ -205,10 +206,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // If on a dedicated domain or query param, try resolving public shop early
     if (dInfo.slugOrDomain) {
+      const subSlug = dInfo.slugOrDomain.split('.')[0];
       supabase
         .from('tb_shops')
         .select('*')
-        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain}`)
+        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain},slug.eq.${subSlug},custom_domain.eq.${subSlug}.gsmsolution.xyz`)
         .maybeSingle()
         .then(({ data: matched }) => {
           if (matched) {
