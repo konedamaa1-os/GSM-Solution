@@ -573,10 +573,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
   };
-        setSettings(inserted);
-      }
-    }
-  };
 
   const deleteCustomer = async (id: string) => {
     const { error } = await supabase.from('tb_customers').delete().eq('id', id);
