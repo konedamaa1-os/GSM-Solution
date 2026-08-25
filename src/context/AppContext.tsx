@@ -32,6 +32,7 @@ interface AppContextType extends AppState {
   switchShop: (shopId: string) => Promise<void>;
   createShopWithManager: (shopName: string, managerName: string, managerEmail: string, managerPassword: string, slug?: string, customDomain?: string) => Promise<{ success: boolean; error?: string }>;
   deleteShop: (shopId: string) => Promise<{ success: boolean; error?: string }>;
+  createTechnicianWithAccount: (name: string, email: string, password: string, phone?: string, role?: string, targetShopId?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const defaultSettings = {
@@ -699,13 +700,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const createTechnicianWithAccount = async (
+    name: string,
+    email: string,
+    password: string,
+    phone?: string,
+    role?: string,
+    targetShopId?: string
+  ) => {
+    const shopId = targetShopId || currentShop?.id;
+    if (!shopId) return { success: false, error: 'Aucun atelier sélectionné.' };
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanRole = role || 'Technicien';
+
+    const { data: rpcResult, error: rpcErr } = await supabase.rpc('create_technician_account', {
+      p_shop_id: shopId,
+      p_name: name.trim(),
+      p_email: cleanEmail,
+      p_password: password,
+      p_phone: phone?.trim() || null,
+      p_role: cleanRole
+    });
+
+    if (rpcErr) {
+      return { success: false, error: rpcErr.message };
+    }
+
+    if (rpcResult && rpcResult.success === false) {
+      return { success: false, error: rpcResult.error || 'Erreur lors de la création du technicien.' };
+    }
+
+    // Refresh employees list for active shop
+    if (currentShop && currentShop.id === shopId) {
+      const { data: emps } = await supabase.from('tb_employees').select('*').eq('shop_id', shopId);
+      if (emps) {
+        setEmployees(emps);
+      }
+    }
+
+    return { success: true };
+  };
+
   return (
     <AppContext.Provider value={{ 
       currentShop, domainShop, domainInfo, invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       updateShopDomain, addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop
+      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop, createTechnicianWithAccount
     }}>
       {children}
     </AppContext.Provider>

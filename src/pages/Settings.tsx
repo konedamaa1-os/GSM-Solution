@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Save, Plus, Trash2, Users, Store, Globe, HelpCircle, Check, Copy, Phone, ShieldCheck, Wrench, Briefcase } from 'lucide-react';
+import { Save, Plus, Trash2, Users, Store, Globe, HelpCircle, Check, Copy, Phone, ShieldCheck, Wrench, Briefcase, Key, Lock, CheckCircle2 } from 'lucide-react';
 
 const Settings = () => {
-  const { settings, updateSettings, currentShop, updateShopDomain, employees, addEmployee, deleteEmployee } = useAppContext();
+  const { 
+    settings, updateSettings, currentShop, updateShopDomain, 
+    employees, deleteEmployee, createTechnicianWithAccount 
+  } = useAppContext();
   
   const [shopSettings, setShopSettings] = useState({
     name: settings?.name || '',
@@ -27,9 +30,14 @@ const Settings = () => {
   // Employee creation state
   const [newEmployeeName, setNewEmployeeName] = useState('');
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
+  const [newEmployeePassword, setNewEmployeePassword] = useState('');
   const [newEmployeePhone, setNewEmployeePhone] = useState('');
   const [newEmployeeRole, setNewEmployeeRole] = useState('Technicien');
+  const [creatingEmployee, setCreatingEmployee] = useState(false);
+  const [employeeCreatedCard, setEmployeeCreatedCard] = useState<{ name: string; email: string; password: string; role: string } | null>(null);
+
   const [message, setMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,21 +63,42 @@ const Settings = () => {
     }
   };
 
-  const handleAddEmployee = (e: React.FormEvent) => {
+  const handleAddEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newEmployeeName.trim() && newEmployeeEmail.trim()) {
-      addEmployee({
+    if (!newEmployeeName.trim() || !newEmployeeEmail.trim() || !newEmployeePassword.trim()) {
+      setErrorMessage('Veuillez remplir le nom, l\'email et le mot de passe.');
+      return;
+    }
+
+    setCreatingEmployee(true);
+    setErrorMessage('');
+    setMessage('');
+
+    const res = await createTechnicianWithAccount(
+      newEmployeeName.trim(),
+      newEmployeeEmail.trim(),
+      newEmployeePassword.trim(),
+      newEmployeePhone.trim() || undefined,
+      newEmployeeRole
+    );
+
+    setCreatingEmployee(false);
+
+    if (res.success) {
+      setEmployeeCreatedCard({
         name: newEmployeeName.trim(),
-        email: newEmployeeEmail.trim(),
-        role: newEmployeeRole,
-        phone: newEmployeePhone.trim() || undefined
+        email: newEmployeeEmail.trim().toLowerCase(),
+        password: newEmployeePassword.trim(),
+        role: newEmployeeRole
       });
       setNewEmployeeName('');
       setNewEmployeeEmail('');
+      setNewEmployeePassword('');
       setNewEmployeePhone('');
       setNewEmployeeRole('Technicien');
-      setMessage('Nouvel employé ajouté avec succès !');
-      setTimeout(() => setMessage(''), 3000);
+      setMessage('Compte technicien créé avec succès ! Il peut désormais se connecter.');
+    } else {
+      setErrorMessage(res.error || 'Erreur lors de la création du compte.');
     }
   };
 
@@ -100,6 +129,12 @@ const Settings = () => {
       {message && (
         <div style={{ padding: '1rem', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '12px', marginBottom: '1.5rem', fontWeight: 600, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Check size={18} /> {message}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div style={{ padding: '1rem', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '12px', marginBottom: '1.5rem', fontWeight: 600, border: '1px solid #fecaca' }}>
+          {errorMessage}
         </div>
       )}
 
@@ -207,45 +242,90 @@ const Settings = () => {
         </form>
       </div>
 
-      {/* 2. Team & Employees Management Card */}
+      {/* 2. Team & Technicians Management Card */}
       <div className="card" style={{ marginBottom: '2rem', borderRadius: '16px' }}>
         <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Users size={20} color="#2563eb" />
-          Gestion de l'Équipe & Création d'Employés
+          Création & Gestion des Techniciens & Employés
         </h3>
         
+        {/* RECAP CARD AFTER TECHNICIAN CREATION */}
+        {employeeCreatedCard && (
+          <div style={{ backgroundColor: '#f0fdf4', border: '1px solid #86efac', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <h4 style={{ margin: 0, color: '#166534', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <CheckCircle2 size={18} /> Identifiants de connexion créés pour {employeeCreatedCard.name} :
+              </h4>
+              <button onClick={() => setEmployeeCreatedCard(null)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>✕</button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px', fontSize: '0.85rem' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Email : <strong>{employeeCreatedCard.email}</strong></span>
+                <button type="button" onClick={() => copyToClipboard(employeeCreatedCard.email, 'email')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }}>
+                  {copiedField === 'email' ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+
+              <div style={{ backgroundColor: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Mot de passe : <strong>{employeeCreatedCard.password}</strong></span>
+                <button type="button" onClick={() => copyToClipboard(employeeCreatedCard.password, 'pwd')} style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer' }}>
+                  {copiedField === 'pwd' ? <Check size={14} /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
+            <small style={{ color: '#15803d', marginTop: '6px', display: 'block' }}>
+              Le technicien peut maintenant se connecter directement avec son rôle <strong>{employeeCreatedCard.role}</strong> !
+            </small>
+          </div>
+        )}
+
+        {/* CREATION FORM */}
         <form onSubmit={handleAddEmployee} style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
           <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', color: '#1e293b', fontWeight: 700 }}>
-            ➕ Ajouter un nouvel employé
+            ➕ Créer un nouveau compte technicien ou employé
           </h4>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '1rem' }}>
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.8rem' }}>Nom complet</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Nom complet *</label>
               <input 
                 type="text" 
                 className="form-control" 
                 value={newEmployeeName}
                 onChange={e => setNewEmployeeName(e.target.value)}
-                placeholder="ex: Yao Kouadio"
+                placeholder="ex: Yao Kouadio Paul"
                 required
               />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.8rem' }}>Email de connexion</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Email de connexion *</label>
               <input 
                 type="email" 
                 className="form-control" 
                 value={newEmployeeEmail}
                 onChange={e => setNewEmployeeEmail(e.target.value)}
-                placeholder="ex: yao@atelier.com"
+                placeholder="ex: tech.yao@atelier.com"
                 required
               />
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.8rem' }}>Téléphone direct</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Mot de passe initial *</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={newEmployeePassword}
+                onChange={e => setNewEmployeePassword(e.target.value)}
+                placeholder="ex: tech1234"
+                required
+                minLength={6}
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Téléphone direct</label>
               <input 
                 type="text" 
                 className="form-control" 
@@ -256,7 +336,7 @@ const Settings = () => {
             </div>
 
             <div className="form-group" style={{ marginBottom: 0 }}>
-              <label style={{ fontSize: '0.8rem' }}>Rôle / Niveau</label>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600 }}>Rôle & Niveau</label>
               <select 
                 className="form-control"
                 value={newEmployeeRole}
@@ -270,9 +350,14 @@ const Settings = () => {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '8px 18px' }}>
+            <button 
+              type="submit" 
+              disabled={creatingEmployee}
+              className="btn btn-primary" 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '8px 20px', fontWeight: 700 }}
+            >
               <Plus size={18} />
-              Créer l'Employé
+              {creatingEmployee ? 'Création du compte...' : 'Créer le Technicien'}
             </button>
           </div>
         </form>
@@ -284,7 +369,7 @@ const Settings = () => {
           
           {employees.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
-              Aucun employé créé pour cet atelier.
+              Aucun technicien ou employé créé pour cet atelier.
             </div>
           ) : (
             <div style={{ display: 'grid', gap: '10px' }}>

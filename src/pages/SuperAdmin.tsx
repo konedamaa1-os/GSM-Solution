@@ -31,7 +31,7 @@ interface CreatedCredentials {
 }
 
 export const SuperAdmin = () => {
-  const { allShops, createShopWithManager, switchShop, currentShop, logout, user, deleteShop } = useAppContext();
+  const { allShops, createShopWithManager, switchShop, currentShop, logout, user, deleteShop, createTechnicianWithAccount } = useAppContext();
   const navigate = useNavigate();
   
   // Navigation tabs in Super Admin
@@ -78,6 +78,54 @@ export const SuperAdmin = () => {
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [resettingPassword, setResettingPassword] = useState(false);
   const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
+
+  // SuperAdmin add employee state
+  const [superTechName, setSuperTechName] = useState('');
+  const [superTechEmail, setSuperTechEmail] = useState('');
+  const [superTechPassword, setSuperTechPassword] = useState('');
+  const [superTechPhone, setSuperTechPhone] = useState('');
+  const [superTechRole, setSuperTechRole] = useState('Technicien');
+  const [superTechLoading, setSuperTechLoading] = useState(false);
+  const [superTechSuccess, setSuperTechSuccess] = useState('');
+  const [superTechError, setSuperTechError] = useState('');
+
+  const handleSuperAddTech = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedShopId || !superTechName || !superTechEmail || !superTechPassword) {
+      setSuperTechError('Veuillez remplir tous les champs obligatoires.');
+      return;
+    }
+    setSuperTechLoading(true);
+    setSuperTechError('');
+    setSuperTechSuccess('');
+
+    const res = await createTechnicianWithAccount(
+      superTechName,
+      superTechEmail,
+      superTechPassword,
+      superTechPhone || undefined,
+      superTechRole,
+      selectedShopId
+    );
+
+    setSuperTechLoading(false);
+
+    if (res.success) {
+      setSuperTechSuccess(`Compte ${superTechRole} (${superTechEmail}) créé avec succès pour cet atelier !`);
+      setSuperTechName('');
+      setSuperTechEmail('');
+      setSuperTechPassword('');
+      setSuperTechPhone('');
+      setSuperTechRole('Technicien');
+      
+      // Refresh inspection data
+      if (selectedShopId) {
+        inspectShop(selectedShopId);
+      }
+    } else {
+      setSuperTechError(res.error || 'Erreur lors de la création.');
+    }
+  };
 
   const displayShops = shops.length > 0 ? shops : allShops;
 
@@ -1098,23 +1146,129 @@ export const SuperAdmin = () => {
 
                 {/* Sub-tab 3: Employees */}
                 {inspectorSubTab === 'employees' && (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-                    {inspectionData.employees.map(e => (
-                      <div key={e.id} style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '1.25rem', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
-                            {e.name.charAt(0).toUpperCase()}
+                  <div>
+                    {/* Add Technician Form */}
+                    <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '1.25rem', marginBottom: '1.5rem' }}>
+                      <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Users size={18} color="#2563eb" /> Ajouter un Technicien / Employé à cet atelier
+                      </h4>
+
+                      {superTechSuccess && (
+                        <div style={{ padding: '0.75rem 1rem', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                          {superTechSuccess}
+                        </div>
+                      )}
+                      {superTechError && (
+                        <div style={{ padding: '0.75rem 1rem', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                          {superTechError}
+                        </div>
+                      )}
+
+                      <form onSubmit={handleSuperAddTech} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', alignItems: 'flex-end' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Nom complet *</label>
+                          <input
+                            type="text"
+                            required
+                            className="form-control"
+                            style={{ padding: '6px 10px', fontSize: '0.85rem', marginBottom: 0 }}
+                            placeholder="ex: Jean Technicien"
+                            value={superTechName}
+                            onChange={e => setSuperTechName(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Email de connexion *</label>
+                          <input
+                            type="email"
+                            required
+                            className="form-control"
+                            style={{ padding: '6px 10px', fontSize: '0.85rem', marginBottom: 0 }}
+                            placeholder="ex: jean@atelier.com"
+                            value={superTechEmail}
+                            onChange={e => setSuperTechEmail(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Mot de passe initial *</label>
+                          <input
+                            type="text"
+                            required
+                            minLength={6}
+                            className="form-control"
+                            style={{ padding: '6px 10px', fontSize: '0.85rem', marginBottom: 0 }}
+                            placeholder="ex: tech1234"
+                            value={superTechPassword}
+                            onChange={e => setSuperTechPassword(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Téléphone</label>
+                          <input
+                            type="text"
+                            className="form-control"
+                            style={{ padding: '6px 10px', fontSize: '0.85rem', marginBottom: 0 }}
+                            placeholder="ex: 07 00 00 00"
+                            value={superTechPhone}
+                            onChange={e => setSuperTechPhone(e.target.value)}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Rôle</label>
+                          <select
+                            className="form-control"
+                            style={{ padding: '6px 10px', fontSize: '0.85rem', marginBottom: 0 }}
+                            value={superTechRole}
+                            onChange={e => setSuperTechRole(e.target.value)}
+                          >
+                            <option value="Technicien">🔧 Technicien (Niveau 2)</option>
+                            <option value="Caisse">💼 Caisse (Niveau 1)</option>
+                            <option value="Manager">👑 Manager (Niveau 3)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <button
+                            type="submit"
+                            disabled={superTechLoading}
+                            className="btn btn-primary"
+                            style={{ width: '100%', padding: '7px 12px', fontSize: '0.85rem', fontWeight: 700 }}
+                          >
+                            {superTechLoading ? 'Création...' : '➕ Ajouter l\'Employé'}
+                          </button>
+                        </div>
+                      </form>
+                    </div>
+
+                    {/* Employees Grid */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+                      {inspectionData.employees.map(e => (
+                        <div key={e.id} style={{ backgroundColor: '#ffffff', borderRadius: '10px', padding: '1.25rem', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                            <div style={{ width: '38px', height: '38px', borderRadius: '50%', backgroundColor: '#e0e7ff', color: '#4338ca', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                              {e.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: 700, color: '#0f172a' }}>{e.name}</div>
+                              <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{e.role}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{e.name}</div>
-                            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{e.role}</div>
+                          <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                            Email : <strong>{e.email || 'Non renseigné'}</strong>
+                            {e.phone && <div>Tél : <strong>{e.phone}</strong></div>}
                           </div>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                          Email : <strong>{e.email || 'Non renseigné'}</strong>
+                      ))}
+                      {inspectionData.employees.length === 0 && (
+                        <div style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', gridColumn: '1 / -1' }}>
+                          Aucun technicien ou employé enregistré pour cet atelier.
                         </div>
-                      </div>
-                    ))}
+                      )}
+                    </div>
                   </div>
                 )}
 
