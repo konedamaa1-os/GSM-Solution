@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Save, Plus, Trash2, Users, Store, Globe, HelpCircle, Check, Copy, Phone, ShieldCheck, Wrench, Briefcase, Key, Lock, CheckCircle2 } from 'lucide-react';
+import { Save, Plus, Trash2, Users, Store, Globe, HelpCircle, Check, Copy, Phone, ShieldCheck, Wrench, Briefcase, Key, Lock, CheckCircle2, X } from 'lucide-react';
 
 const Settings = () => {
   const { 
     settings, updateSettings, currentShop, updateShopDomain, 
-    employees, deleteEmployee, createTechnicianWithAccount 
+    employees, deleteEmployee, createTechnicianWithAccount, updateEmployeePassword 
   } = useAppContext();
   
   const [shopSettings, setShopSettings] = useState({
@@ -35,6 +35,14 @@ const Settings = () => {
   const [newEmployeeRole, setNewEmployeeRole] = useState('Technicien');
   const [creatingEmployee, setCreatingEmployee] = useState(false);
   const [employeeCreatedCard, setEmployeeCreatedCard] = useState<{ name: string; email: string; password: string; role: string } | null>(null);
+
+  // Employee Password Update Modal state
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [targetEmployee, setTargetEmployee] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [updatingPassword, setUpdatingPassword] = useState(false);
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState('');
 
   const [message, setMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
@@ -99,6 +107,27 @@ const Settings = () => {
       setMessage('Compte technicien créé avec succès ! Il peut désormais se connecter.');
     } else {
       setErrorMessage(res.error || 'Erreur lors de la création du compte.');
+    }
+  };
+
+  const handleUpdatePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!targetEmployee || !newPasswordInput.trim()) return;
+
+    setUpdatingPassword(true);
+    setPasswordErrorMsg('');
+    setPasswordSuccessMsg('');
+
+    const res = await updateEmployeePassword(targetEmployee.email, newPasswordInput.trim());
+    setUpdatingPassword(false);
+
+    if (res.success) {
+      setPasswordSuccessMsg(`Le mot de passe de ${targetEmployee.name} (${targetEmployee.email}) a été modifié avec succès !`);
+      setTimeout(() => {
+        // Keep message visible or close
+      }, 4000);
+    } else {
+      setPasswordErrorMsg(res.error || 'Erreur lors de la modification du mot de passe.');
     }
   };
 
@@ -246,7 +275,7 @@ const Settings = () => {
       <div className="card" style={{ marginBottom: '2rem', borderRadius: '16px' }}>
         <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Users size={20} color="#2563eb" />
-          Création & Gestion des Techniciens & Employés
+          Gestion de l'Équipe & Accès des Techniciens
         </h3>
         
         {/* RECAP CARD AFTER TECHNICIAN CREATION */}
@@ -394,7 +423,7 @@ const Settings = () => {
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -411,6 +440,23 @@ const Settings = () => {
                         <span>{badge.label}</span>
                       </span>
 
+                      {/* MODIFY PASSWORD BUTTON */}
+                      <button 
+                        onClick={() => {
+                          setTargetEmployee(emp);
+                          setNewPasswordInput('');
+                          setPasswordSuccessMsg('');
+                          setPasswordErrorMsg('');
+                          setPasswordModalOpen(true);
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: 600, color: '#1e40af', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}
+                        title="Modifier le mot de passe de cet employé"
+                      >
+                        <Key size={14} /> Modifier MDP
+                      </button>
+
+                      {/* DELETE BUTTON */}
                       <button 
                         onClick={() => deleteEmployee(emp.id)}
                         className="btn btn-secondary"
@@ -525,6 +571,104 @@ const Settings = () => {
           </button>
         </form>
       </div>
+
+      {/* PASSWORD UPDATE MODAL */}
+      {passwordModalOpen && targetEmployee && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div style={{
+            backgroundColor: '#ffffff',
+            borderRadius: '16px',
+            maxWidth: '460px',
+            width: '100%',
+            padding: '2rem',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.2)',
+            border: '1px solid #e2e8f0'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Key size={20} color="#2563eb" />
+                Modifier le Mot de Passe
+              </h3>
+              <button 
+                onClick={() => setPasswordModalOpen(false)} 
+                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '1.25rem' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
+              <div>👤 Employé : <strong>{targetEmployee.name}</strong> ({targetEmployee.role})</div>
+              <div style={{ color: '#64748b' }}>📧 Email : <strong>{targetEmployee.email}</strong></div>
+            </div>
+
+            {passwordSuccessMsg && (
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                {passwordSuccessMsg}
+              </div>
+            )}
+
+            {passwordErrorMsg && (
+              <div style={{ padding: '0.75rem 1rem', backgroundColor: '#fee2e2', color: '#991b1b', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.85rem', fontWeight: 600 }}>
+                {passwordErrorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleUpdatePasswordSubmit}>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>
+                  Nouveau mot de passe *
+                </label>
+                <input 
+                  type="text" 
+                  required 
+                  minLength={6}
+                  className="form-control" 
+                  placeholder="ex: nouveauMotDePasse123"
+                  value={newPasswordInput}
+                  onChange={e => setNewPasswordInput(e.target.value)}
+                  autoFocus
+                />
+                <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                  Au moins 6 caractères. L'employé pourra immédiatement se connecter avec ce nouveau mot de passe.
+                </small>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setPasswordModalOpen(false)} 
+                  className="btn btn-secondary"
+                >
+                  Fermer
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={updatingPassword || !newPasswordInput.trim()}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700 }}
+                >
+                  <Lock size={16} />
+                  {updatingPassword ? 'Mise à jour...' : 'Enregistrer le Mot de Passe'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

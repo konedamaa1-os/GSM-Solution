@@ -33,6 +33,7 @@ interface AppContextType extends AppState {
   createShopWithManager: (shopName: string, managerName: string, managerEmail: string, managerPassword: string, slug?: string, customDomain?: string) => Promise<{ success: boolean; error?: string }>;
   deleteShop: (shopId: string) => Promise<{ success: boolean; error?: string }>;
   createTechnicianWithAccount: (name: string, email: string, password: string, phone?: string, role?: string, targetShopId?: string) => Promise<{ success: boolean; error?: string }>;
+  updateEmployeePassword: (email: string, newPassword: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const defaultSettings = {
@@ -742,7 +743,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    return { success: true };
+  const updateEmployeePassword = async (email: string, newPassword: string) => {
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const { data, error } = await supabase.rpc('update_employee_password', {
+        p_email: cleanEmail,
+        p_new_password: newPassword
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      if (data && data.success === false) {
+        return { success: false, error: data.error || 'Erreur lors de la mise à jour du mot de passe.' };
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erreur inattendue.' };
+    }
   };
 
   return (
@@ -751,7 +771,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       updateShopDomain, addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop, createTechnicianWithAccount
+      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop, createTechnicianWithAccount, updateEmployeePassword
     }}>
       {children}
     </AppContext.Provider>
