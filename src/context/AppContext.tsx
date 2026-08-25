@@ -348,11 +348,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (existingCustomer) {
       customerId = existingCustomer.id;
       finalCustomer = existingCustomer;
+      // Update phone2 / phone3 if provided
+      if (invoiceData.customer.phone2 || invoiceData.customer.phone3) {
+        await supabase.from('tb_customers').update({
+          phone2: invoiceData.customer.phone2 || existingCustomer.phone2,
+          phone3: invoiceData.customer.phone3 || existingCustomer.phone3,
+          name: invoiceData.customer.name || existingCustomer.name
+        }).eq('id', existingCustomer.id);
+        finalCustomer = { ...existingCustomer, ...invoiceData.customer };
+      }
     } else {
       const { data: customerData, error: custError } = await supabase.from('tb_customers').insert({
         shop_id: currentShop.id,
         name: invoiceData.customer.name,
         phone: invoiceData.customer.phone,
+        phone2: invoiceData.customer.phone2 || null,
+        phone3: invoiceData.customer.phone3 || null,
         email: invoiceData.customer.email,
         address: invoiceData.customer.address
       }).select().single();
@@ -445,7 +456,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       shop_id: currentShop.id,
       name: employeeData.name,
       role: employeeData.role,
-      email: employeeData.email
+      email: employeeData.email,
+      phone: employeeData.phone || null
     }).select().single();
     
     if (data) {
@@ -495,29 +507,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     
     const { data: currentSettings } = await supabase.from('tb_shop_settings').select('id').eq('shop_id', currentShop.id).limit(1).maybeSingle();
     
+    const payload = {
+      name: newSettings.name,
+      address: newSettings.address,
+      phone: newSettings.phone,
+      phone2: newSettings.phone2 || null,
+      phone3: newSettings.phone3 || null,
+      email: newSettings.email,
+      terms_and_conditions: newSettings.termsAndConditions
+    };
+
     if (currentSettings) {
-      const { error } = await supabase.from('tb_shop_settings').update({
-        name: newSettings.name,
-        address: newSettings.address,
-        phone: newSettings.phone,
-        email: newSettings.email,
-        terms_and_conditions: newSettings.termsAndConditions
-      }).eq('id', currentSettings.id);
+      const { error } = await supabase.from('tb_shop_settings').update(payload).eq('id', currentSettings.id);
 
       if (!error) {
         setSettings({ ...newSettings, shop_id: currentShop.id });
       }
     } else {
       const { data: inserted } = await supabase.from('tb_shop_settings').insert({
-        shop_id: currentShop.id,
-        name: newSettings.name,
-        address: newSettings.address,
-        phone: newSettings.phone,
-        email: newSettings.email,
-        terms_and_conditions: newSettings.termsAndConditions
+        ...payload,
+        shop_id: currentShop.id
       }).select().single();
 
       if (inserted) {
+        setSettings(inserted);
+      }
+    }
+  };
         setSettings(inserted);
       }
     }

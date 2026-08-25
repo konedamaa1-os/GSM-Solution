@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { Save, Plus, Trash2, User, Store, Globe, HelpCircle, Check, Copy } from 'lucide-react';
+import { Save, Plus, Trash2, Users, Store, Globe, HelpCircle, Check, Copy, Phone, ShieldCheck, Wrench, Briefcase } from 'lucide-react';
 
 const Settings = () => {
   const { settings, updateSettings, currentShop, updateShopDomain, employees, addEmployee, deleteEmployee } = useAppContext();
   
-  const [shopSettings, setShopSettings] = useState(settings || {
-    name: '',
-    address: '',
-    phone: '',
-    email: '',
-    termsAndConditions: '',
-    shop_id: ''
+  const [shopSettings, setShopSettings] = useState({
+    name: settings?.name || '',
+    address: settings?.address || '',
+    phone: settings?.phone || '',
+    phone2: settings?.phone2 || '',
+    phone3: settings?.phone3 || '',
+    email: settings?.email || '',
+    termsAndConditions: settings?.termsAndConditions || '',
+    shop_id: settings?.shop_id || ''
   });
 
   // Domain & Branding state
@@ -22,15 +24,20 @@ const Settings = () => {
   const [domainError, setDomainError] = useState('');
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
+  // Employee creation state
   const [newEmployeeName, setNewEmployeeName] = useState('');
   const [newEmployeeEmail, setNewEmployeeEmail] = useState('');
-  const [newEmployeeRole, setNewEmployeeRole] = useState('Réparateur');
+  const [newEmployeePhone, setNewEmployeePhone] = useState('');
+  const [newEmployeeRole, setNewEmployeeRole] = useState('Technicien');
   const [message, setMessage] = useState('');
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    updateSettings(shopSettings);
-    setMessage('Paramètres enregistrés avec succès !');
+    updateSettings({
+      ...shopSettings,
+      shop_id: currentShop?.id || ''
+    });
+    setMessage('Paramètres et contacts de l\'atelier enregistrés avec succès !');
     setTimeout(() => setMessage(''), 3000);
   };
 
@@ -51,10 +58,18 @@ const Settings = () => {
   const handleAddEmployee = (e: React.FormEvent) => {
     e.preventDefault();
     if (newEmployeeName.trim() && newEmployeeEmail.trim()) {
-      addEmployee({ name: newEmployeeName.trim(), email: newEmployeeEmail.trim(), role: newEmployeeRole });
+      addEmployee({
+        name: newEmployeeName.trim(),
+        email: newEmployeeEmail.trim(),
+        role: newEmployeeRole,
+        phone: newEmployeePhone.trim() || undefined
+      });
       setNewEmployeeName('');
       setNewEmployeeEmail('');
-      setNewEmployeeRole('Réparateur');
+      setNewEmployeePhone('');
+      setNewEmployeeRole('Technicien');
+      setMessage('Nouvel employé ajouté avec succès !');
+      setTimeout(() => setMessage(''), 3000);
     }
   };
 
@@ -66,47 +81,50 @@ const Settings = () => {
 
   const previewLocalParamUrl = `${window.location.origin}/?shop=${slug || 'mon-atelier'}`;
 
+  const getRoleBadge = (role: string) => {
+    if (role.toLowerCase().includes('manager') || role.toLowerCase().includes('direct')) {
+      return { bg: '#eff6ff', color: '#1d4ed8', border: '#bfdbfe', icon: <ShieldCheck size={14} />, label: 'Direction / Gérant' };
+    }
+    if (role.toLowerCase().includes('caisse') || role.toLowerCase().includes('accueil')) {
+      return { bg: '#fef3c7', color: '#b45309', border: '#fde68a', icon: <Briefcase size={14} />, label: 'Caisse / Accueil' };
+    }
+    return { bg: '#ecfdf5', color: '#047857', border: '#a7f3d0', icon: <Wrench size={14} />, label: 'Technicien / Réparateur' };
+  };
+
   return (
-    <div style={{ maxWidth: '850px', margin: '0 auto' }}>
-      <h2 style={{ marginBottom: '2rem' }}>Paramètres de l'Atelier</h2>
+    <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+      <h2 style={{ marginBottom: '2rem', fontSize: '1.75rem', fontWeight: 800, color: '#0f172a' }}>
+        Paramètres & Gestion de l'Atelier
+      </h2>
 
       {message && (
-        <div style={{ padding: '1rem', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '8px', marginBottom: '1rem' }}>
-          {message}
+        <div style={{ padding: '1rem', backgroundColor: '#dcfce7', color: '#166534', borderRadius: '12px', marginBottom: '1.5rem', fontWeight: 600, border: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Check size={18} /> {message}
         </div>
       )}
 
-      {/* 1. Shop Profile Info */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
+      {/* 1. Shop Profile Info & 3 Contact Numbers */}
+      <div className="card" style={{ marginBottom: '2rem', borderRadius: '16px' }}>
         <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Store size={20} />
-          Informations de la boutique
+          <Store size={20} color="#2563eb" />
+          Informations de la Boutique & Contacts
         </h3>
         <form onSubmit={handleSaveSettings}>
-          <div className="form-group">
-            <label>Nom de la boutique</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              value={shopSettings.name}
-              onChange={e => setShopSettings({...shopSettings, name: e.target.value})}
-              required
-            />
-          </div>
           
           <div className="form-row">
-            <div className="form-group">
-              <label>Téléphone</label>
+            <div className="form-group" style={{ flex: 2 }}>
+              <label>Nom de la boutique</label>
               <input 
                 type="text" 
                 className="form-control" 
-                value={shopSettings.phone}
-                onChange={e => setShopSettings({...shopSettings, phone: e.target.value})}
+                value={shopSettings.name}
+                onChange={e => setShopSettings({...shopSettings, name: e.target.value})}
                 required
               />
             </div>
-            <div className="form-group">
-              <label>Email</label>
+            
+            <div className="form-group" style={{ flex: 2 }}>
+              <label>Email de l'atelier</label>
               <input 
                 type="email" 
                 className="form-control" 
@@ -117,19 +135,63 @@ const Settings = () => {
             </div>
           </div>
 
+          {/* 3 CONTACT NUMBERS */}
+          <div style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '1.5rem' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>
+              <Phone size={16} color="#2563eb" /> 3 Numéros de Contact Officiels (Visibles sur Factures & Devis)
+            </label>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.8rem', color: '#475569' }}>📞 Contact 1 (Principal / Appels)</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={shopSettings.phone}
+                  onChange={e => setShopSettings({...shopSettings, phone: e.target.value})}
+                  placeholder="ex: +225 07 00 00 00 01"
+                  required
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.8rem', color: '#475569' }}>💬 Contact 2 (WhatsApp / Pro)</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={shopSettings.phone2}
+                  onChange={e => setShopSettings({...shopSettings, phone2: e.target.value})}
+                  placeholder="ex: +225 05 00 00 00 02"
+                />
+              </div>
+
+              <div className="form-group" style={{ marginBottom: 0 }}>
+                <label style={{ fontSize: '0.8rem', color: '#475569' }}>🚨 Contact 3 (Urgence / Service Client)</label>
+                <input 
+                  type="text" 
+                  className="form-control" 
+                  value={shopSettings.phone3}
+                  onChange={e => setShopSettings({...shopSettings, phone3: e.target.value})}
+                  placeholder="ex: +225 01 00 00 00 03"
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="form-group">
-            <label>Adresse</label>
+            <label>Adresse physique</label>
             <input 
               type="text" 
               className="form-control" 
               value={shopSettings.address}
               onChange={e => setShopSettings({...shopSettings, address: e.target.value})}
+              placeholder="ex: Rue du Commerce, Abidjan"
               required
             />
           </div>
 
           <div className="form-group">
-            <label>Conditions Générales (Facture)</label>
+            <label>Conditions Générales (Pied de Facture)</label>
             <textarea 
               className="form-control" 
               rows={3}
@@ -140,13 +202,149 @@ const Settings = () => {
 
           <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Save size={18} />
-            Enregistrer les informations
+            Enregistrer les Coordonnées de l'Atelier
           </button>
         </form>
       </div>
 
-      {/* 2. Custom Domain & Branding Card */}
-      <div className="card" style={{ marginBottom: '2rem', border: '1px solid #bfdbfe', backgroundColor: '#f8fafc' }}>
+      {/* 2. Team & Employees Management Card */}
+      <div className="card" style={{ marginBottom: '2rem', borderRadius: '16px' }}>
+        <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <Users size={20} color="#2563eb" />
+          Gestion de l'Équipe & Création d'Employés
+        </h3>
+        
+        <form onSubmit={handleAddEmployee} style={{ backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '2rem' }}>
+          <h4 style={{ margin: '0 0 1rem 0', fontSize: '0.95rem', color: '#1e293b', fontWeight: 700 }}>
+            ➕ Ajouter un nouvel employé
+          </h4>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '1rem' }}>
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '0.8rem' }}>Nom complet</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={newEmployeeName}
+                onChange={e => setNewEmployeeName(e.target.value)}
+                placeholder="ex: Yao Kouadio"
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '0.8rem' }}>Email de connexion</label>
+              <input 
+                type="email" 
+                className="form-control" 
+                value={newEmployeeEmail}
+                onChange={e => setNewEmployeeEmail(e.target.value)}
+                placeholder="ex: yao@atelier.com"
+                required
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '0.8rem' }}>Téléphone direct</label>
+              <input 
+                type="text" 
+                className="form-control" 
+                value={newEmployeePhone}
+                onChange={e => setNewEmployeePhone(e.target.value)}
+                placeholder="ex: 07 00 00 00 00"
+              />
+            </div>
+
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label style={{ fontSize: '0.8rem' }}>Rôle / Niveau</label>
+              <select 
+                className="form-control"
+                value={newEmployeeRole}
+                onChange={e => setNewEmployeeRole(e.target.value)}
+              >
+                <option value="Technicien">🔧 Technicien (Niveau 2)</option>
+                <option value="Caisse">💼 Caisse / Réception (Niveau 1)</option>
+                <option value="Manager">👑 Manager / Gérant (Niveau 3)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '8px 18px' }}>
+              <Plus size={18} />
+              Créer l'Employé
+            </button>
+          </div>
+        </form>
+
+        <div>
+          <h4 style={{ marginBottom: '1rem', fontSize: '1rem', color: '#475569', fontWeight: 600 }}>
+            Membres de l'équipe ({employees.length})
+          </h4>
+          
+          {employees.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#94a3b8' }}>
+              Aucun employé créé pour cet atelier.
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {employees.map(emp => {
+                const badge = getRoleBadge(emp.role);
+                return (
+                  <div key={emp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '12px', backgroundColor: '#ffffff' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: badge.bg, border: `1px solid ${badge.border}`, color: badge.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '1.1rem' }}>
+                        {emp.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700, color: '#0f172a' }}>{emp.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span>{emp.email}</span>
+                          {emp.phone && (
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <Phone size={12} /> {emp.phone}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        backgroundColor: badge.bg,
+                        color: badge.color,
+                        border: `1px solid ${badge.border}`,
+                        fontSize: '0.75rem',
+                        fontWeight: 600
+                      }}>
+                        {badge.icon}
+                        <span>{badge.label}</span>
+                      </span>
+
+                      <button 
+                        onClick={() => deleteEmployee(emp.id)}
+                        className="btn btn-secondary"
+                        style={{ padding: '6px', color: '#ef4444', border: '1px solid #fee2e2', backgroundColor: '#fef2f2', cursor: 'pointer' }}
+                        title="Supprimer l'employé"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 3. Custom Domain & Branding Card */}
+      <div className="card" style={{ marginBottom: '2rem', border: '1px solid #bfdbfe', backgroundColor: '#f8fafc', borderRadius: '16px' }}>
         <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#1e40af' }}>
           <Globe size={20} />
           Nom de Domaine & Identité Visuelle de l'Atelier
@@ -180,7 +378,7 @@ const Settings = () => {
                 />
               </div>
               <small style={{ color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-                Donne accès direct au portail : <a href={previewLocalParamUrl} target="_blank" rel="noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{previewLocalParamUrl}</a>
+                Accès direct : <a href={previewLocalParamUrl} target="_blank" rel="noreferrer" style={{ color: '#2563eb', textDecoration: 'underline' }}>{previewLocalParamUrl}</a>
               </small>
             </div>
 
@@ -208,11 +406,8 @@ const Settings = () => {
               className="form-control" 
               value={customDomain}
               onChange={e => setCustomDomain(e.target.value.toLowerCase().trim())}
-              placeholder="ex: mon-atelier-reparation.fr ou app.monatelier.com"
+              placeholder="ex: mon-atelier-reparation.com ou www.gsmsolutiondivo.xyz"
             />
-            <small style={{ color: 'var(--text-secondary)', marginTop: '4px', display: 'block' }}>
-              Si vous avez acheté votre propre nom de domaine chez OVH, Hostinger, Namecheap...
-            </small>
           </div>
 
           {/* DNS Instructions Box */}
@@ -221,19 +416,16 @@ const Settings = () => {
               <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <HelpCircle size={16} color="#2563eb" /> Instructions de configuration DNS pour {customDomain} :
               </h4>
-              <p style={{ fontSize: '0.8125rem', color: '#475569', margin: '0 0 0.75rem 0' }}>
-                Ajoutez les enregistrements suivants dans la zone DNS de votre registrar pour pointer votre domaine vers Vercel :
-              </p>
 
               <div style={{ display: 'grid', gap: '0.5rem', fontSize: '0.8125rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                  <span><strong>Type :</strong> CNAME &nbsp;|&nbsp; <strong>Nom :</strong> {customDomain.includes('.') && customDomain.split('.').length > 2 ? customDomain.split('.')[0] : '@'} &nbsp;|&nbsp; <strong>Cible :</strong> <code>cname.vercel-dns.com</code></span>
+                  <span><strong>Type :</strong> CNAME &nbsp;|&nbsp; <strong>Nom :</strong> {customDomain.includes('.') && customDomain.split('.').length > 2 ? customDomain.split('.')[0] : 'www'} &nbsp;|&nbsp; <strong>Cible :</strong> <code>cname.vercel-dns.com</code></span>
                   <button type="button" onClick={() => copyToClipboard('cname.vercel-dns.com', 'cname')} className="btn btn-secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }}>
                     {copiedField === 'cname' ? <Check size={12} /> : <Copy size={12} />}
                   </button>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '6px 12px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                  <span><strong>Type :</strong> A (Domaine racine) &nbsp;|&nbsp; <strong>Nom :</strong> @ &nbsp;|&nbsp; <strong>Cible :</strong> <code>76.76.21.21</code></span>
+                  <span><strong>Type :</strong> A &nbsp;|&nbsp; <strong>Nom :</strong> @ &nbsp;|&nbsp; <strong>Cible :</strong> <code>76.76.21.21</code></span>
                   <button type="button" onClick={() => copyToClipboard('76.76.21.21', 'ip')} className="btn btn-secondary" style={{ padding: '2px 8px', fontSize: '0.75rem' }}>
                     {copiedField === 'ip' ? <Check size={12} /> : <Copy size={12} />}
                   </button>
@@ -247,73 +439,6 @@ const Settings = () => {
             Enregistrer le Domaine & la Marque
           </button>
         </form>
-      </div>
-
-      {/* 3. Team Management Card */}
-      <div className="card">
-        <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <User size={20} />
-          Gestion de l'équipe
-        </h3>
-        
-        <form onSubmit={handleAddEmployee} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '2rem' }}>
-          <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
-            <label>Nom du technicien</label>
-            <input 
-              type="text" 
-              className="form-control" 
-              value={newEmployeeName}
-              onChange={e => setNewEmployeeName(e.target.value)}
-              placeholder="Ex: Jean Dupont"
-              required
-            />
-          </div>
-          <div className="form-group" style={{ flex: 2, marginBottom: 0 }}>
-            <label>Email du technicien</label>
-            <input 
-              type="email" 
-              className="form-control" 
-              value={newEmployeeEmail}
-              onChange={e => setNewEmployeeEmail(e.target.value)}
-              placeholder="Ex: jean@tontonboua.com"
-              required
-            />
-          </div>
-          <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-            <label>Rôle</label>
-            <select 
-              className="form-control"
-              value={newEmployeeRole}
-              onChange={e => setNewEmployeeRole(e.target.value)}
-            >
-              <option value="Réparateur">Réparateur</option>
-              <option value="Manager">Manager</option>
-            </select>
-          </div>
-          <button type="submit" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: 0 }}>
-            <Plus size={18} />
-            Ajouter
-          </button>
-        </form>
-
-        <div>
-          <h4 style={{ marginBottom: '1rem', fontSize: '1rem', color: 'var(--text-secondary)' }}>Membres actuels</h4>
-          {employees.map(emp => (
-            <div key={emp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: '8px', marginBottom: '0.5rem' }}>
-              <div>
-                <div style={{ fontWeight: 500 }}>{emp.name}</div>
-                <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{emp.role}</div>
-              </div>
-              <button 
-                onClick={() => deleteEmployee(emp.id)}
-                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0.5rem' }}
-                title="Supprimer"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          ))}
-        </div>
       </div>
     </div>
   );

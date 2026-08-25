@@ -15,6 +15,8 @@ export interface Employee {
   name: string;
   role: string;
   email?: string;
+  phone?: string;
+  active?: boolean;
 }
 
 export interface Customer {
@@ -22,6 +24,8 @@ export interface Customer {
   shop_id: string;
   name: string;
   phone: string;
+  phone2?: string;
+  phone3?: string;
   email?: string;
   address?: string;
 }
@@ -62,6 +66,8 @@ export interface ShopSettings {
   name: string;
   address: string;
   phone: string;
+  phone2?: string;
+  phone3?: string;
   email: string;
   termsAndConditions: string;
   subscription_plan?: SubscriptionPlan;
