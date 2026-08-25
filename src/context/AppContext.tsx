@@ -420,6 +420,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return false;
       }
 
+      // Auto-learn Brand & Model if new
+      if (invoiceData.device.brand && invoiceData.device.model) {
+        const brandClean = invoiceData.device.brand.trim();
+        const modelClean = invoiceData.device.model.trim();
+        const existsModel = deviceModels.some(
+          m => m.brand.toLowerCase() === brandClean.toLowerCase() && m.model.toLowerCase() === modelClean.toLowerCase()
+        );
+        if (!existsModel) {
+          supabase.from('tb_device_models').insert({
+            shop_id: currentShop.id,
+            brand: brandClean,
+            model: modelClean
+          }).select().single().then(({ data: newModel }) => {
+            if (newModel) {
+              setDeviceModels(prev => [...prev, newModel].sort((a, b) => a.brand.localeCompare(b.brand)));
+            }
+          });
+        }
+      }
+
+      // Auto-learn Panne / Issue if new
+      if (invoiceData.device.issue) {
+        const issueClean = invoiceData.device.issue.trim();
+        const existsIssue = commonIssues.some(
+          i => i.name.toLowerCase() === issueClean.toLowerCase()
+        );
+        if (!existsIssue) {
+          supabase.from('tb_common_issues').insert({
+            shop_id: currentShop.id,
+            name: issueClean,
+            default_price: invoiceData.price || 0
+          }).select().single().then(({ data: newIssue }) => {
+            if (newIssue) {
+              setCommonIssues(prev => [...prev, newIssue].sort((a, b) => a.name.localeCompare(b.name)));
+            }
+          });
+        }
+      }
+
       // Update local state
       const newInvoice: Invoice = {
         ...invoiceData,

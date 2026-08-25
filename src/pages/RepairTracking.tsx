@@ -86,7 +86,20 @@ const RepairTracking = () => {
                   <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{invoice.device.issue.substring(0, 30)}...</div>
                 </td>
                 <td style={{ padding: '1rem 0' }}>
-                  {employees.find(e => e.id === invoice.employeeId)?.name || 'Inconnu'}
+                  <span style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '4px', 
+                    backgroundColor: '#eff6ff', 
+                    color: '#1d4ed8', 
+                    border: '1px solid #bfdbfe', 
+                    padding: '3px 8px', 
+                    borderRadius: '6px', 
+                    fontSize: '0.8rem', 
+                    fontWeight: 600 
+                  }}>
+                    🔧 {employees.find(e => e.id === invoice.employeeId)?.name || 'Non assigné'}
+                  </span>
                 </td>
                 <td style={{ padding: '1rem 0' }}>
                   <select 

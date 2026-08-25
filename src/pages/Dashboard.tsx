@@ -174,8 +174,10 @@ const Dashboard = () => {
                     <div style={{ fontWeight: 500 }}>{invoice.invoiceNumber} - {invoice.customer.name}</div>
                     <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
                       {invoice.device.brand} {invoice.device.model} 
-                      <span style={{ margin: '0 8px' }}>|</span> 
-                      Réceptionné par: {employees.find(e => e.id === invoice.employeeId)?.name || 'Inconnu'}
+                      <span style={{ margin: '0 8px' }}>•</span> 
+                      <span style={{ color: '#2563eb', fontWeight: 500 }}>
+                        🔧 Technicien : {employees.find(e => e.id === invoice.employeeId)?.name || 'Non assigné'}
+                      </span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>

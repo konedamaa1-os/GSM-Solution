@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { useNavigate } from 'react-router-dom';
-import { Save, Phone, User, Smartphone, DollarSign } from 'lucide-react';
+import { Save, Phone, User, Smartphone, DollarSign, Wrench, ShieldCheck, Sparkles } from 'lucide-react';
 
 const CreateInvoice = () => {
   const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee, settings } = useAppContext();
@@ -25,7 +25,7 @@ const CreateInvoice = () => {
   });
 
   // Extraire les clients uniques pour l'auto-complétion
-  const uniqueCustomers = React.useMemo(() => {
+  const uniqueCustomers = useMemo(() => {
     const map = new Map();
     invoices.forEach(inv => {
       if (inv.customer && inv.customer.phone) {
@@ -35,18 +35,65 @@ const CreateInvoice = () => {
     return Array.from(map.values());
   }, [invoices]);
 
-  React.useEffect(() => {
-    if (!formData.employeeId && employees.length > 0) {
-      setFormData(prev => ({ ...prev, employeeId: activeEmployee?.id || employees[0].id }));
+  // Auto-assign connected technician / employee by default
+  useEffect(() => {
+    if (activeEmployee && (!formData.employeeId || formData.employeeId === '')) {
+      setFormData(prev => ({ ...prev, employeeId: activeEmployee.id }));
+    } else if (!formData.employeeId && employees.length > 0) {
+      setFormData(prev => ({ ...prev, employeeId: employees[0].id }));
     }
-  }, [employees, formData.employeeId, activeEmployee]);
+  }, [employees, activeEmployee]);
+
+  // Dynamic & auto-learning brand suggestions
+  const dynamicBrands = useMemo(() => {
+    const fromModels = deviceModels.map(m => m.brand);
+    const fromInvoices = invoices.map(i => i.device?.brand).filter(Boolean);
+    const defaultBrands = ['Apple', 'Samsung', 'Tecno', 'Infinix', 'Xiaomi', 'Huawei', 'Oppo', 'Vivo', 'Itel', 'Redmi', 'Google Pixel', 'Realme', 'Honor', 'Sony', 'Nokia', 'Motorola', 'HP', 'Dell', 'Lenovo', 'Asus', 'Acer', 'MacBook'];
+    return Array.from(new Set([...fromModels, ...fromInvoices, ...defaultBrands])).sort((a, b) => a.localeCompare(b));
+  }, [deviceModels, invoices]);
+
+  // Dynamic & auto-learning model suggestions
+  const dynamicModels = useMemo(() => {
+    const brandLower = formData.deviceBrand.trim().toLowerCase();
+    const fromModels = deviceModels
+      .filter(m => !brandLower || m.brand.toLowerCase() === brandLower)
+      .map(m => m.model);
+    const fromInvoices = invoices
+      .filter(i => !brandLower || i.device?.brand?.toLowerCase() === brandLower)
+      .map(i => i.device?.model)
+      .filter(Boolean);
+    
+    return Array.from(new Set([...fromModels, ...fromInvoices])).sort((a, b) => a.localeCompare(b));
+  }, [deviceModels, invoices, formData.deviceBrand]);
+
+  // Dynamic & auto-learning issues / pannes suggestions
+  const dynamicIssues = useMemo(() => {
+    const fromIssues = commonIssues.map(i => i.name);
+    const fromInvoices = invoices.map(i => i.device?.issue).filter(Boolean);
+    const defaultIssues = [
+      'Écran cassé / Tactile HS',
+      'Batterie à remplacer',
+      'Connecteur de charge défectueux',
+      'Caméra arrière / avant défectueuse',
+      'Micro / Haut-parleur muet',
+      'Téléphone tombé dans l\'eau (Désoxydation)',
+      'Problème de charge / Ne s\'allume plus',
+      'Bouton Power / Volume bloqué',
+      'Vitre arrière fissurée',
+      'Déblocage / Schéma oublié',
+      'Problème Réseau / Wi-Fi',
+      'Changement Châssis / Coque',
+      'Flashage / Réinstallation Système'
+    ];
+    return Array.from(new Set([...fromIssues, ...fromInvoices, ...defaultIssues])).sort((a, b) => a.localeCompare(b));
+  }, [commonIssues, invoices]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
-    // Auto-fill price if a common issue is selected
+    // Auto-fill price if a common issue with default price is selected
     if (name === 'deviceIssue') {
-      const issue = commonIssues.find(i => i.name === value);
+      const issue = commonIssues.find(i => i.name.toLowerCase() === value.trim().toLowerCase());
       if (issue && issue.default_price) {
         setFormData(prev => ({ ...prev, [name]: value, price: issue.default_price!.toString() }));
         return;
@@ -70,11 +117,6 @@ const CreateInvoice = () => {
     });
   };
 
-  // Get unique brands for the datalist
-  const uniqueBrands = Array.from(new Set(deviceModels.map(m => m.brand)));
-  // Filter models based on selected brand
-  const filteredModels = deviceModels.filter(m => !formData.deviceBrand || m.brand === formData.deviceBrand).map(m => m.model);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -89,12 +131,12 @@ const CreateInvoice = () => {
         address: ''
       },
       device: {
-        brand: formData.deviceBrand,
-        model: formData.deviceModel,
-        serialNumber: formData.deviceSerial,
-        issue: formData.deviceIssue,
-        password: formData.devicePassword,
-        accessories: formData.deviceAccessories,
+        brand: formData.deviceBrand.trim(),
+        model: formData.deviceModel.trim(),
+        serialNumber: formData.deviceSerial.trim(),
+        issue: formData.deviceIssue.trim(),
+        password: formData.devicePassword.trim(),
+        accessories: formData.deviceAccessories.trim(),
       },
       employeeId: formData.employeeId,
       price: Number(formData.price),
@@ -128,9 +170,34 @@ const CreateInvoice = () => {
     );
   }
 
+  const assignedEmployee = employees.find(e => e.id === formData.employeeId) || activeEmployee;
+
   return (
     <div style={{ maxWidth: '850px', margin: '0 auto' }}>
-      <h2 style={{ marginBottom: '2rem', fontSize: '1.75rem', fontWeight: 800 }}>Nouvelle Fiche & Facture de Réparation</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, margin: 0 }}>
+          Nouvelle Fiche & Facture de Réparation
+        </h2>
+
+        {/* CONNECTED TECHNICIAN BADGE */}
+        {assignedEmployee && (
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#eff6ff',
+            border: '1px solid #bfdbfe',
+            padding: '6px 14px',
+            borderRadius: '999px',
+            fontSize: '0.85rem',
+            color: '#1e40af',
+            fontWeight: 600
+          }}>
+            <Wrench size={15} color="#2563eb" />
+            <span>Responsable prise en charge : <strong>{assignedEmployee.name}</strong></span>
+          </div>
+        )}
+      </div>
       
       <form onSubmit={handleSubmit}>
         
@@ -213,72 +280,128 @@ const CreateInvoice = () => {
           </div>
         </div>
 
-        {/* 2. DÉTAILS APPAREIL */}
+        {/* 2. DÉTAILS APPAREIL & PANNE (AUTO-CATALOGUE INTELLIGENT) */}
         <div className="card" style={{ marginBottom: '1.5rem', borderRadius: '16px' }}>
-          <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Smartphone size={20} color="#2563eb" />
-            Détails de l'Appareil & Panne
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+              <Smartphone size={20} color="#2563eb" />
+              Détails de l'Appareil & Panne
+            </h3>
+            <span style={{ fontSize: '0.75rem', backgroundColor: '#f3e8ff', color: '#7e22ce', padding: '3px 8px', borderRadius: '10px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <Sparkles size={12} /> Auto-apprentissage activé
+            </span>
+          </div>
+
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Marque *</label>
-              <input type="text" name="deviceBrand" list="brands-list" required className="form-control" placeholder="ex: Apple, Samsung, Tecno..." value={formData.deviceBrand} onChange={handleChange} />
+              <label className="form-label">Marque de l'appareil *</label>
+              <input 
+                type="text" 
+                name="deviceBrand" 
+                list="brands-list" 
+                required 
+                className="form-control" 
+                placeholder="Tapez ou choisissez (ex: Apple, Samsung...)" 
+                value={formData.deviceBrand} 
+                onChange={handleChange} 
+              />
               <datalist id="brands-list">
-                {uniqueBrands.map(brand => <option key={brand} value={brand} />)}
+                {dynamicBrands.map(brand => <option key={brand} value={brand} />)}
               </datalist>
             </div>
+
             <div className="form-group">
-              <label className="form-label">Modèle *</label>
-              <input type="text" name="deviceModel" list="models-list" required className="form-control" placeholder="ex: iPhone 13 Pro, A14..." value={formData.deviceModel} onChange={handleChange} />
+              <label className="form-label">Modèle exact *</label>
+              <input 
+                type="text" 
+                name="deviceModel" 
+                list="models-list" 
+                required 
+                className="form-control" 
+                placeholder="Tapez ou choisissez (ex: iPhone 13, Spark 10...)" 
+                value={formData.deviceModel} 
+                onChange={handleChange} 
+              />
               <datalist id="models-list">
-                {filteredModels.map(model => <option key={model} value={model} />)}
+                {dynamicModels.map(model => <option key={model} value={model} />)}
               </datalist>
             </div>
           </div>
           
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Numéro de Série / IMEI</label>
-              <input type="text" name="deviceSerial" className="form-control" placeholder="Optionnel" value={formData.deviceSerial} onChange={handleChange} />
+              <label className="form-label">Numéro de Série / IMEI (Optionnel)</label>
+              <input type="text" name="deviceSerial" className="form-control" placeholder="ex: 3568912..." value={formData.deviceSerial} onChange={handleChange} />
             </div>
             <div className="form-group">
-              <label className="form-label">Mot de passe / Schéma</label>
-              <input type="text" name="devicePassword" className="form-control" placeholder="ex: 1234 ou Code" value={formData.devicePassword} onChange={handleChange} />
+              <label className="form-label">Mot de passe / Code de verrouillage</label>
+              <input type="text" name="devicePassword" className="form-control" placeholder="ex: 1234 ou Code PIN" value={formData.devicePassword} onChange={handleChange} />
             </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">Description de la Panne *</label>
-            <input type="text" name="deviceIssue" list="issues-list" required className="form-control" placeholder="ex: Écran cassé, Batterie, Connecteur..." value={formData.deviceIssue} onChange={handleChange} />
+            <input 
+              type="text" 
+              name="deviceIssue" 
+              list="issues-list" 
+              required 
+              className="form-control" 
+              placeholder="Tapez la panne ou sélectionnez dans la liste (ex: Écran cassé...)" 
+              value={formData.deviceIssue} 
+              onChange={handleChange} 
+            />
             <datalist id="issues-list">
-              {commonIssues.map(issue => <option key={issue.id} value={issue.name} />)}
+              {dynamicIssues.map((issue, idx) => <option key={idx} value={issue} />)}
             </datalist>
+            <small style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+              💡 Toute nouvelle marque, modèle ou panne saisie sera automatiquement mémorisée dans le menu déroulant !
+            </small>
           </div>
           
           <div className="form-group">
             <label className="form-label">Accessoires laissés (ex: Chargeur, Coque, Carte SIM)</label>
-            <input type="text" name="deviceAccessories" className="form-control" placeholder="Aucun ou détails" value={formData.deviceAccessories} onChange={handleChange} />
+            <input type="text" name="deviceAccessories" className="form-control" placeholder="ex: Coque rouge, sans chargeur" value={formData.deviceAccessories} onChange={handleChange} />
           </div>
         </div>
 
-        {/* 3. FACTURATION & TECHNICIEN */}
+        {/* 3. FACTURATION & TECHNICIEN RESPONSABLE */}
         <div className="card" style={{ marginBottom: '1.5rem', borderRadius: '16px' }}>
           <h3 className="card-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <DollarSign size={20} color="#2563eb" />
-            Réparation & Facturation
+            Attribution & Facturation
           </h3>
+          
           <div className="form-row">
             <div className="form-group">
-              <label className="form-label">Technicien / Réceptionné par *</label>
-              <select name="employeeId" required className="form-control" value={formData.employeeId} onChange={handleChange}>
-                <option value="" disabled>Sélectionner...</option>
-                {employees.map(emp => (
-                  <option key={emp.id} value={emp.id}>{emp.name} ({emp.role})</option>
-                ))}
+              <label className="form-label" style={{ fontWeight: 700, color: '#0f172a' }}>
+                Technicien / Responsable de prise en charge *
+              </label>
+              <select 
+                name="employeeId" 
+                required 
+                className="form-control" 
+                value={formData.employeeId} 
+                onChange={handleChange}
+                style={{ fontWeight: 600, border: '2px solid #93c5fd' }}
+              >
+                <option value="" disabled>Sélectionner un technicien...</option>
+                {employees.map(emp => {
+                  const isCurrent = activeEmployee?.id === emp.id;
+                  return (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.role}) {isCurrent ? '⭐ (Vous - Connecté)' : ''}
+                    </option>
+                  );
+                })}
               </select>
+              <small style={{ color: '#2563eb', fontSize: '0.75rem', marginTop: '4px', display: 'block' }}>
+                Automatiquement assigné au compte technicien actuellement connecté.
+              </small>
             </div>
+
             <div className="form-group">
-              <label className="form-label">Garantie (Mois) *</label>
+              <label className="form-label">Garantie offerte (Mois) *</label>
               <input type="number" name="warrantyMonths" min="0" required className="form-control" value={formData.warrantyMonths} onChange={handleChange} />
             </div>
           </div>
@@ -291,7 +414,7 @@ const CreateInvoice = () => {
           </div>
           
           <div className="form-group">
-            <label className="form-label">Notes ou observations</label>
+            <label className="form-label">Notes ou observations pour l'atelier</label>
             <textarea name="notes" className="form-control" style={{ minHeight: '60px' }} placeholder="Observations particulières..." value={formData.notes} onChange={handleChange}></textarea>
           </div>
         </div>
