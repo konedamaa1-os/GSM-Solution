@@ -17,6 +17,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Subscription from './pages/Subscription';
 import SuperAdmin from './pages/SuperAdmin';
+import SuperAdminLogin from './pages/SuperAdminLogin';
 import LandingPage from './pages/LandingPage';
 import { ShopPortal } from './pages/ShopPortal';
 
@@ -355,6 +356,7 @@ function App() {
       <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/super-admin-login" element={<SuperAdminLogin />} />
             <Route path="/inscription" element={<SignUp />} />
             <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
             <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />

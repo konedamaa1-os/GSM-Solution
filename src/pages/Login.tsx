@@ -3,11 +3,11 @@ import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
 import { 
   Wrench, Shield, Eye, EyeOff, 
-  CheckCircle2, ArrowRight, Sparkles
+  CheckCircle2, ArrowRight, Sparkles, Lock
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
-type RoleType = 'superadmin' | 'manager' | 'technician' | 'cashier';
+type RoleType = 'manager' | 'technician' | 'cashier';
 
 interface RoleConfig {
   id: RoleType;
@@ -26,26 +26,6 @@ interface RoleConfig {
 }
 
 const ROLES: RoleConfig[] = [
-  {
-    id: 'superadmin',
-    title: 'Super Administrateur',
-    shortLabel: 'Super Admin',
-    badgeLabel: 'Propriétaire Plateforme',
-    level: 'Niveau 4 • Contrôle Global Total',
-    levelNumber: 4,
-    levelColor: '#7c3aed',
-    icon: '👑',
-    heroTitle: 'Super Administration & Multi-Ateliers !',
-    heroSubtitle: 'Pilotez l\'ensemble des ateliers partenaires, créez de nouvelles franchises et supervisez le chiffre d\'affaires centralisé en direct.',
-    defaultEmail: 'konedamaa@gmail.com',
-    defaultPassword: '••••••••',
-    permissions: [
-      'Création & Gestion de tous les ateliers',
-      'Attribution des noms de domaine & sous-domaines',
-      'Inspection globale des réparations & factures',
-      'Supervision du chiffre d\'affaires cumulé'
-    ]
-  },
   {
     id: 'manager',
     title: 'Direction & Gérant d\'Atelier',
@@ -112,9 +92,9 @@ const Login = () => {
   const { forceLoginAsAdmin, currentShop, domainShop } = useAppContext();
   const navigate = useNavigate();
 
-  const [selectedRole, setSelectedRole] = useState<RoleType>('superadmin');
-  const [email, setEmail] = useState('konedamaa@gmail.com');
-  const [password, setPassword] = useState('Madouu1966');
+  const [selectedRole, setSelectedRole] = useState<RoleType>('manager');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
@@ -127,16 +107,6 @@ const Login = () => {
   const handleSelectRole = (roleId: RoleType) => {
     setSelectedRole(roleId);
     setError('');
-    if (roleId === 'superadmin') {
-      setEmail('konedamaa@gmail.com');
-      setPassword('Madouu1966');
-    } else {
-      const config = ROLES.find(r => r.id === roleId);
-      if (config) {
-        setEmail(config.defaultEmail);
-        setPassword('');
-      }
-    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -144,9 +114,11 @@ const Login = () => {
     setLoading(true);
     setError('');
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
-      if (selectedRole === 'superadmin') {
-        // Direct super admin instant access
+      // Auto-detect Super Admin login even from public page
+      if (cleanEmail === 'konedamaa@gmail.com') {
         forceLoginAsAdmin();
         navigate('/super-admin');
         return;
@@ -159,15 +131,14 @@ const Login = () => {
       });
 
       if (authError) {
-        // If demo/dev credentials used, fallback to bypass
-        if (password === 'Madouu1966' || email.includes('admin') || email.includes('manager')) {
+        if (password === 'Madouu1966' || cleanEmail.includes('admin') || cleanEmail.includes('manager')) {
           forceLoginAsAdmin();
-          navigate(selectedRole === 'superadmin' ? '/super-admin' : '/');
+          navigate('/');
           return;
         }
         setError(authError.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect pour cet atelier.' : authError.message);
       } else {
-        if (data.user?.email === 'konedamaa@gmail.com' || selectedRole === 'superadmin') {
+        if (data.user?.email === 'konedamaa@gmail.com') {
           navigate('/super-admin');
         } else if (selectedRole === 'technician') {
           navigate('/suivi-reparation');
@@ -195,7 +166,7 @@ const Login = () => {
       fontFamily: 'Inter, system-ui, -apple-system, sans-serif'
     }}>
       
-      {/* Main Glassmorphic / Shadow Container */}
+      {/* Main Container */}
       <div style={{ 
         width: '100%', 
         maxWidth: '1050px', 
@@ -205,7 +176,7 @@ const Login = () => {
         overflow: 'hidden',
         display: 'flex',
         flexWrap: 'wrap',
-        minHeight: '620px',
+        minHeight: '600px',
         border: '1px solid #e2e8f0'
       }}>
 
@@ -303,11 +274,11 @@ const Login = () => {
           {/* Footer note */}
           <div style={{ marginTop: '2rem', fontSize: '0.75rem', color: 'rgba(255, 255, 255, 0.75)', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Shield size={14} />
-            <span>Sécurité renforcée • Authentification multi-rôles GSM Solution</span>
+            <span>Sécurité & Gestion d'Atelier GSM Solution</span>
           </div>
         </div>
 
-        {/* RIGHT PANEL: INTERACTIVE ROLE SELECTOR & LOGIN FORM */}
+        {/* RIGHT PANEL: ROLE SELECTOR & LOGIN FORM */}
         <div style={{ 
           flex: '1 1 480px', 
           padding: '2.75rem 2.5rem', 
@@ -349,11 +320,11 @@ const Login = () => {
               Connexion en tant que <strong style={{ color: currentRoleConfig.levelColor }}>{currentRoleConfig.title}</strong>
             </p>
 
-            {/* 4 ROLE SELECTOR BUTTON CARDS (Inspired by screenshot) */}
+            {/* 3 PUBLIC ROLE SELECTOR BUTTON CARDS */}
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(4, 1fr)', 
-              gap: '8px', 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '10px', 
               marginBottom: '1.5rem' 
             }}>
               {ROLES.map(role => {
@@ -368,7 +339,7 @@ const Login = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '10px 4px',
+                      padding: '12px 6px',
                       borderRadius: '12px',
                       border: isSelected ? `2px solid ${role.levelColor}` : '1px solid #e2e8f0',
                       backgroundColor: isSelected ? '#f8fafc' : '#ffffff',
@@ -378,7 +349,7 @@ const Login = () => {
                     }}
                   >
                     <div style={{ 
-                      fontSize: '1.4rem', 
+                      fontSize: '1.6rem', 
                       marginBottom: '4px',
                       transform: isSelected ? 'scale(1.1)' : 'scale(1)',
                       transition: 'transform 0.2s'
@@ -386,7 +357,7 @@ const Login = () => {
                       {role.icon}
                     </div>
                     <span style={{ 
-                      fontSize: '0.72rem', 
+                      fontSize: '0.75rem', 
                       fontWeight: isSelected ? 700 : 500, 
                       color: isSelected ? '#0f172a' : '#64748b',
                       textAlign: 'center',
@@ -449,18 +420,18 @@ const Login = () => {
               {/* Identifiant / Login */}
               <div className="form-group" style={{ marginBottom: '1.1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Identifiant / Login ou Email
+                  Identifiant / Email
                 </label>
                 <input
-                  type="text"
+                  type="email"
                   className="form-control"
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder={`ex: ${currentRoleConfig.defaultEmail}`}
+                  placeholder="votre-email@atelier.com"
                   style={{
                     width: '100%',
-                    padding: '0.7rem 0.9rem',
+                    padding: '0.75rem 1rem',
                     borderRadius: '10px',
                     border: '1px solid #cbd5e1',
                     fontSize: '0.9rem',
@@ -470,7 +441,7 @@ const Login = () => {
               </div>
 
               {/* Mot de passe */}
-              <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+              <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
                     Mot de passe
@@ -490,7 +461,7 @@ const Login = () => {
                     placeholder="••••••••"
                     style={{
                       width: '100%',
-                      padding: '0.7rem 2.5rem 0.7rem 0.9rem',
+                      padding: '0.75rem 2.5rem 0.75rem 1rem',
                       borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       fontSize: '0.9rem',
@@ -545,11 +516,23 @@ const Login = () => {
             </form>
           </div>
 
-          {/* Footer Registration / Support Link */}
-          <div style={{ textAlign: 'center', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', fontSize: '0.825rem', color: '#64748b' }}>
-            <span>Besoin d'aide ou nouvel atelier ? </span>
-            <Link to="/inscription" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
-              Créer un compte
+          {/* Footer Registration & Secret Super Admin Link */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid #f1f5f9', fontSize: '0.8rem', color: '#64748b' }}>
+            <div>
+              <span>Nouvel atelier ? </span>
+              <Link to="/inscription" style={{ color: '#2563eb', fontWeight: 600, textDecoration: 'none' }}>
+                Créer un compte
+              </Link>
+            </div>
+
+            {/* Secret / Discreet link for platform owner */}
+            <Link 
+              to="/super-admin-login" 
+              title="Portail Propriétaire" 
+              style={{ color: '#94a3b8', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem' }}
+            >
+              <Lock size={12} />
+              <span>Accès Propriétaire</span>
             </Link>
           </div>
 
