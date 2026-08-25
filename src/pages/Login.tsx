@@ -126,7 +126,7 @@ const Login = () => {
 
       // Supabase standard authentication
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: cleanEmail,
         password: password,
       });
 
@@ -141,7 +141,7 @@ const Login = () => {
         if (data.user?.email === 'konedamaa@gmail.com') {
           navigate('/super-admin');
         } else if (selectedRole === 'technician') {
-          navigate('/suivi-reparation');
+          navigate('/reparations');
         } else if (selectedRole === 'cashier') {
           navigate('/nouvelle-facture');
         } else {

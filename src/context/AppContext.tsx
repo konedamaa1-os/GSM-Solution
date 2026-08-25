@@ -62,7 +62,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   
   const activeEmployee = React.useMemo(() => {
     if (!user || !user.email) return null;
-    return employees.find(e => e.email === user.email) || null;
+    const cleanEmail = user.email.trim().toLowerCase();
+    return employees.find(e => e.email?.trim().toLowerCase() === cleanEmail) || null;
   }, [user, employees]);
 
   const currentUserRole = activeEmployee ? activeEmployee.role : null;
@@ -144,8 +145,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const fetchData = async () => {
+  const fetchData = async (currentUser?: User | null) => {
     setLoading(true);
+    const activeUser = currentUser !== undefined ? currentUser : user;
     
     // 1. First check domain / subdomain info
     const dInfo = getDomainInfo();
@@ -168,28 +170,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
-    // 2. If no domain shop matched or default domain, fetch for authenticated user
+    // 2. If no domain shop matched or default domain, fetch specifically for authenticated user
+    if (!activeShop && activeUser && activeUser.email) {
+      const cleanUserEmail = activeUser.email.trim().toLowerCase();
+
+      // A. Check if user is an employee in tb_employees
+      const { data: empRecord } = await supabase
+        .from('tb_employees')
+        .select('shop_id')
+        .eq('email', cleanUserEmail)
+        .limit(1)
+        .maybeSingle();
+
+      if (empRecord && empRecord.shop_id) {
+        const { data: empShop } = await supabase
+          .from('tb_shops')
+          .select('*')
+          .eq('id', empRecord.shop_id)
+          .limit(1)
+          .maybeSingle();
+        if (empShop) {
+          activeShop = empShop;
+          setCurrentShop(empShop);
+        }
+      }
+
+      // B. If not found in employees, check if user is shop owner
+      if (!activeShop && activeUser.id) {
+        const { data: ownedShop } = await supabase
+          .from('tb_shops')
+          .select('*')
+          .eq('owner_id', activeUser.id)
+          .limit(1)
+          .maybeSingle();
+        if (ownedShop) {
+          activeShop = ownedShop;
+          setCurrentShop(ownedShop);
+        }
+      }
+    }
+
+    // 3. Fallback to first shop in DB
     if (!activeShop) {
       const { data: shopData } = await supabase.from('tb_shops').select('*').limit(1).maybeSingle();
-      
       if (shopData) {
         activeShop = shopData;
         setCurrentShop(shopData);
-      } else if (user) {
-        // Auto-create shop for new user
-        const autoSlug = (user.email?.split('@')[0] || 'boutique').toLowerCase().replace(/[^a-z0-9]/g, '-');
-        const { data: newShop, error } = await supabase.from('tb_shops').insert({
-          owner_id: user.id,
-          name: 'Ma Nouvelle Boutique',
-          slug: autoSlug
-        }).select().single();
-        
-        if (newShop) {
-          activeShop = newShop;
-          setCurrentShop(newShop);
-        } else {
-          console.error("Erreur création boutique:", error);
-        }
       }
     }
 
@@ -209,41 +235,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const dInfo = getDomainInfo();
     setDomainInfo(dInfo);
 
-    // If on a dedicated domain or query param, try resolving public shop early
-    if (dInfo.slugOrDomain) {
-      const subSlug = dInfo.slugOrDomain.split('.')[0];
-      supabase
-        .from('tb_shops')
-        .select('*')
-        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain},slug.eq.${subSlug},custom_domain.eq.${subSlug}.gsmsolution.xyz`)
-        .maybeSingle()
-        .then(({ data: matched }) => {
-          if (matched) {
-            setDomainShop(matched);
-            setCurrentShop(matched);
-          }
-        });
-    }
-
     // Check for dev bypass
     const isDevBypass = localStorage.getItem('dev_bypass') === 'true';
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isDevBypass) {
-        setUser({ email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any);
-        fetchData();
+        const devUser = { email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any;
+        setUser(devUser);
+        fetchData(devUser);
         return;
       }
       
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchData();
+        fetchData(session.user);
       } else {
         // If domain is detected, fetch shop data anyway for public portal
         if (dInfo.slugOrDomain) {
-          fetchData();
+          fetchData(null);
         } else {
           setLoading(false);
         }
@@ -257,7 +268,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchData();
+        fetchData(session.user);
       } else {
         // Clear data on logout
         if (!domainShop) {
