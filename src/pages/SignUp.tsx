@@ -25,6 +25,9 @@ const SignUp = () => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`
+      }
     });
 
     if (error) {
@@ -36,7 +39,7 @@ const SignUp = () => {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-color)' }}>
       <div className="card" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
           <div style={{ backgroundColor: 'var(--primary-color)', color: 'white', padding: '1rem', borderRadius: '50%', marginBottom: '1rem' }}>
@@ -54,8 +57,11 @@ const SignUp = () => {
 
         {success ? (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ backgroundColor: '#f0fdf4', color: '#166534', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-              Inscription réussie ! Veuillez vérifier vos e-mails pour confirmer votre compte (si activé par l'administrateur), ou connectez-vous directement.
+            <div style={{ backgroundColor: 'var(--stat-green-bg)', color: 'var(--stat-green-text)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--border-color)' }}>
+              <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>Vérifiez votre boîte mail 📧</h3>
+              <p style={{ fontSize: '0.9rem', lineHeight: '1.4', color: 'var(--text-primary)' }}>
+                Un e-mail de confirmation a été envoyé à <strong>{email}</strong>. Veuillez cliquer sur le lien d'activation de ce message pour valider votre compte.
+              </p>
             </div>
             <Link to="/login" className="btn btn-primary" style={{ display: 'block', textDecoration: 'none' }}>
               Retour à la connexion

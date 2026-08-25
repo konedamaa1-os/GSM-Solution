@@ -1,9 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
-import { Wrench, FileText, LayoutDashboard, Settings, Users, LogOut, CreditCard, Menu, X } from 'lucide-react';
+import { Wrench, FileText, LayoutDashboard, Settings, Users, LogOut, CreditCard, Menu, X, Globe } from 'lucide-react';
 
-// Components (we will create these next)
+// Components
 import Dashboard from './pages/Dashboard';
 import CreateInvoice from './pages/CreateInvoice';
 import RepairTracking from './pages/RepairTracking';
@@ -18,6 +18,7 @@ import ResetPassword from './pages/ResetPassword';
 import Subscription from './pages/Subscription';
 import SuperAdmin from './pages/SuperAdmin';
 import LandingPage from './pages/LandingPage';
+import { ShopPortal } from './pages/ShopPortal';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAppContext();
@@ -215,7 +216,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Wrench size={24} />
-            <span>GSM SOLUTION</span>
+            <span>{currentShop?.name || 'GSM SOLUTION'}</span>
           </div>
           <button className="mobile-close-btn" onClick={closeMobileMenu} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
             <X size={24} color="var(--text-secondary)" />
@@ -275,7 +276,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </NavLink>
               <NavLink to="/parametres" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
                 <Settings size={20} />
-                Paramètres
+                Paramètres & Domaine
               </NavLink>
             </>
           )}
@@ -285,6 +286,21 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               Super Admin
             </NavLink>
           )}
+
+          {/* Link to public shop portal */}
+          {currentShop && (
+            <a 
+              href={`/?shop=${currentShop.slug || currentShop.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="nav-item"
+              style={{ color: 'var(--primary-color)', fontSize: '0.875rem' }}
+            >
+              <Globe size={18} />
+              Voir Portail Client
+            </a>
+          )}
+
           <div style={{ flex: 1 }}></div>
           <div style={{ padding: '0 1rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
             Connecté : <strong>{activeEmployee?.name || user?.email}</strong>
@@ -309,7 +325,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 };
 
 const HomeOrDashboard = () => {
-  const { user, loading } = useAppContext();
+  const { user, loading, domainShop } = useAppContext();
   
   if (loading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0f172a', color: 'white' }}>Chargement...</div>;
@@ -323,6 +339,11 @@ const HomeOrDashboard = () => {
         </Layout>
       </ProtectedRoute>
     );
+  }
+
+  // If accessed via workshop domain / subdomain / ?shop=... and not logged in, show workshop portal
+  if (domainShop) {
+    return <ShopPortal shop={domainShop} />;
   }
   
   return <LandingPage />;

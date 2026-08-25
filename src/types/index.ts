@@ -2,6 +2,10 @@ export interface Shop {
   id: string;
   owner_id: string;
   name: string;
+  slug?: string;
+  custom_domain?: string;
+  logo_url?: string;
+  brand_color?: string;
   created_at?: string;
 }
 

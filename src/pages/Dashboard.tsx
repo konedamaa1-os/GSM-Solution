@@ -124,8 +124,8 @@ const Dashboard = () => {
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#dcfce7', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#166534' }}>{filteredRevenue.toLocaleString()} CFA</div>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--stat-green-bg)', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--stat-green-text)' }}>{filteredRevenue.toLocaleString()} CFA</div>
               <div style={{ color: 'var(--text-secondary)' }}>
                 {revenuePeriod === 'today' ? 'Recette du jour' :
                  revenuePeriod === 'week' ? 'Recette de la semaine' :
@@ -135,10 +135,10 @@ const Dashboard = () => {
               </div>
             </div>
             <div 
-              style={{ padding: '1rem', backgroundColor: '#fee2e2', borderRadius: '8px', textAlign: 'center', cursor: 'pointer' }}
+              style={{ padding: '1rem', backgroundColor: 'var(--stat-red-bg)', borderRadius: '8px', textAlign: 'center', cursor: 'pointer' }}
               onClick={() => setSearchTerm('Impayé')}
             >
-              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: '#991b1b' }}>{unpaidTotal.toLocaleString()} CFA</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--stat-red-text)' }}>{unpaidTotal.toLocaleString()} CFA</div>
               <div style={{ color: 'var(--text-secondary)' }}>Total Impayés</div>
             </div>
           </div>
@@ -147,12 +147,12 @@ const Dashboard = () => {
         <div className="card">
           <h3 className="card-header">Statistiques</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-            <div style={{ padding: '1rem', backgroundColor: '#eff6ff', borderRadius: '8px', textAlign: 'center' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--stat-blue-bg)', borderRadius: '8px', textAlign: 'center' }}>
               <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--primary-color)' }}>{invoices.length}</div>
               <div style={{ color: 'var(--text-secondary)' }}>Total Factures</div>
             </div>
-            <div style={{ padding: '1rem', backgroundColor: '#fef3c7', borderRadius: '8px', textAlign: 'center' }}>
-              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#d97706' }}>
+            <div style={{ padding: '1rem', backgroundColor: 'var(--stat-yellow-bg)', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--stat-yellow-text)' }}>
                 {invoices.filter(i => i.status === 'Pending' || i.status === 'In Progress').length}
               </div>
               <div style={{ color: 'var(--text-secondary)' }}>Réparations en cours</div>
@@ -184,8 +184,8 @@ const Dashboard = () => {
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       fontWeight: 600,
-                      backgroundColor: invoice.paymentStatus === 'Payé' ? '#dcfce7' : '#fee2e2',
-                      color: invoice.paymentStatus === 'Payé' ? '#166534' : '#991b1b'
+                      backgroundColor: invoice.paymentStatus === 'Payé' ? 'var(--stat-green-bg)' : 'var(--stat-red-bg)',
+                      color: invoice.paymentStatus === 'Payé' ? 'var(--stat-green-text)' : 'var(--stat-red-text)'
                     }}>
                       {invoice.paymentStatus}
                     </span>

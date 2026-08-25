@@ -93,7 +93,7 @@ const RepairTracking = () => {
                     value={invoice.status} 
                     onChange={(e) => handleStatusChange(invoice.id, e.target.value)}
                     className="form-control"
-                    style={{ padding: '0.25rem 0.5rem', width: 'auto', backgroundColor: '#f9fafb' }}
+                    style={{ padding: '0.25rem 0.5rem', width: 'auto', backgroundColor: 'var(--input-bg)', color: 'var(--text-primary)' }}
                     disabled={invoice.status === 'Cancelled' && !isManager}
                   >
                     <option value="Pending">En attente</option>

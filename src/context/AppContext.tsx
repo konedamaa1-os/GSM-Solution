@@ -2,14 +2,18 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { AppState, Invoice, Employee, ShopSettings, RepairStatus, DeviceModel, CommonIssue, Shop } from '../types';
 import { supabase } from '../lib/supabase';
 import type { Session, User } from '@supabase/supabase-js';
+import { getDomainInfo, type DomainInfo } from '../lib/domain';
 
 interface AppContextType extends AppState {
+  domainShop: Shop | null;
+  domainInfo: DomainInfo;
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>) => Promise<boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
   updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus']) => Promise<void>;
   addEmployee: (employee: Omit<Employee, 'id' | 'shop_id'>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   updateSettings: (settings: ShopSettings) => Promise<void>;
+  updateShopDomain: (slug: string, customDomain: string, brandColor?: string) => Promise<{ success: boolean; error?: string }>;
   addDeviceModel: (model: Omit<DeviceModel, 'id' | 'created_at' | 'shop_id'>) => Promise<void>;
   deleteDeviceModel: (id: string) => Promise<void>;
   addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at' | 'shop_id'>) => Promise<void>;
@@ -26,7 +30,7 @@ interface AppContextType extends AppState {
   isSuperAdmin: boolean;
   allShops: Shop[];
   switchShop: (shopId: string) => Promise<void>;
-  createShopWithManager: (shopName: string, managerName: string, managerEmail: string, managerPassword: string) => Promise<{ success: boolean; error?: string }>;
+  createShopWithManager: (shopName: string, managerName: string, managerEmail: string, managerPassword: string, slug?: string, customDomain?: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 export const defaultSettings = {
@@ -41,6 +45,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentShop, setCurrentShop] = useState<Shop | null>(null);
+  const [domainShop, setDomainShop] = useState<Shop | null>(null);
+  const [domainInfo, setDomainInfo] = useState<DomainInfo>({ isCustomDomain: false, isSubdomain: false, slugOrDomain: null, type: 'none' });
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [settings, setSettings] = useState<ShopSettings | null>(null);
@@ -63,116 +69,161 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                     localStorage.getItem('dev_bypass') === 'true' ||
                     user?.email === 'konedamaa@gmail.com';
 
+  const fetchShopData = async (activeShop: Shop) => {
+    // Fetch Settings
+    const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').eq('shop_id', activeShop.id).limit(1).maybeSingle();
+    if (settingsData) {
+      setSettings(settingsData);
+    }
+
+    // Fetch Employees
+    const { data: employeesData } = await supabase.from('tb_employees').select('*').eq('shop_id', activeShop.id);
+    if (employeesData && employeesData.length > 0) {
+      setEmployees(employeesData);
+    } else if (user) {
+      // Auto insert owner if employee list is empty
+      const { data: ownerEmp } = await supabase.from('tb_employees').insert({
+        shop_id: activeShop.id,
+        name: user.email?.split('@')[0] || 'Propriétaire',
+        email: user.email,
+        role: 'Manager'
+      }).select().single();
+      
+      if (ownerEmp) {
+        setEmployees([ownerEmp]);
+      }
+    }
+
+    // Fetch Device Models
+    const { data: modelsData } = await supabase.from('tb_device_models').select('*').eq('shop_id', activeShop.id).order('brand', { ascending: true });
+    if (modelsData) {
+      setDeviceModels(modelsData);
+    }
+
+    // Fetch Common Issues
+    const { data: issuesData } = await supabase.from('tb_common_issues').select('*').eq('shop_id', activeShop.id).order('name', { ascending: true });
+    if (issuesData) {
+      setCommonIssues(issuesData);
+    }
+
+    // Fetch Invoices with Customers and Devices
+    const { data: invoicesData } = await supabase
+      .from('tb_invoices')
+      .select(`
+        *,
+        customer:tb_customers(*),
+        device:tb_devices(*)
+      `)
+      .eq('shop_id', activeShop.id)
+      .order('date', { ascending: false });
+
+    if (invoicesData) {
+      const formattedInvoices: Invoice[] = invoicesData
+        .filter(inv => inv.customer && inv.device)
+        .map(inv => ({
+        id: inv.id,
+        shop_id: inv.shop_id,
+        invoiceNumber: inv.invoice_number,
+        date: inv.date,
+        customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
+        employeeId: inv.employee_id,
+        device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
+        price: inv.price,
+        warrantyMonths: inv.warranty_months,
+        status: inv.status as RepairStatus,
+        paymentStatus: inv.payment_status || 'Impayé',
+        notes: inv.notes
+      }));
+      setInvoices(formattedInvoices);
+    }
+  };
+
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch or create Shop
-    let activeShop = null;
-    const { data: shopData } = await supabase.from('tb_shops').select('*').limit(1).maybeSingle();
-    
-    if (shopData) {
-      activeShop = shopData;
-      setCurrentShop(shopData);
-    } else if (user) {
-      // Auto-create shop for new user
-      const { data: newShop, error } = await supabase.from('tb_shops').insert({
-        owner_id: user.id,
-        name: 'Ma Nouvelle Boutique'
-      }).select().single();
+    // 1. First check domain / subdomain info
+    const dInfo = getDomainInfo();
+    setDomainInfo(dInfo);
+
+    let activeShop: Shop | null = null;
+
+    if (dInfo.slugOrDomain) {
+      const { data: matchedShop } = await supabase
+        .from('tb_shops')
+        .select('*')
+        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain}`)
+        .maybeSingle();
+
+      if (matchedShop) {
+        activeShop = matchedShop;
+        setDomainShop(matchedShop);
+        setCurrentShop(matchedShop);
+      }
+    }
+
+    // 2. If no domain shop matched or default domain, fetch for authenticated user
+    if (!activeShop) {
+      const { data: shopData } = await supabase.from('tb_shops').select('*').limit(1).maybeSingle();
       
-      if (newShop) {
-        activeShop = newShop;
-        setCurrentShop(newShop);
-      } else {
-        console.error("Erreur création boutique:", error);
+      if (shopData) {
+        activeShop = shopData;
+        setCurrentShop(shopData);
+      } else if (user) {
+        // Auto-create shop for new user
+        const autoSlug = (user.email?.split('@')[0] || 'boutique').toLowerCase().replace(/[^a-z0-9]/g, '-');
+        const { data: newShop, error } = await supabase.from('tb_shops').insert({
+          owner_id: user.id,
+          name: 'Ma Nouvelle Boutique',
+          slug: autoSlug
+        }).select().single();
+        
+        if (newShop) {
+          activeShop = newShop;
+          setCurrentShop(newShop);
+        } else {
+          console.error("Erreur création boutique:", error);
+        }
       }
     }
 
     if (activeShop) {
-      // Fetch Settings
-      const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').eq('shop_id', activeShop.id).limit(1).maybeSingle();
-      if (settingsData) {
-        setSettings(settingsData);
-      }
-
-      // Fetch Employees
-      const { data: employeesData } = await supabase.from('tb_employees').select('*').eq('shop_id', activeShop.id);
-      if (employeesData && employeesData.length > 0) {
-        setEmployees(employeesData);
-      } else if (user) {
-        // Auto insert owner if employee list is empty
-        const { data: ownerEmp } = await supabase.from('tb_employees').insert({
-          shop_id: activeShop.id,
-          name: user.email?.split('@')[0] || 'Propriétaire',
-          email: user.email,
-          role: 'Manager'
-        }).select().single();
-        
-        if (ownerEmp) {
-          setEmployees([ownerEmp]);
-        }
-      }
-
-      // Fetch Device Models
-      const { data: modelsData } = await supabase.from('tb_device_models').select('*').eq('shop_id', activeShop.id).order('brand', { ascending: true });
-      if (modelsData) {
-        setDeviceModels(modelsData);
-      }
-
-      // Fetch Common Issues
-      const { data: issuesData } = await supabase.from('tb_common_issues').select('*').eq('shop_id', activeShop.id).order('name', { ascending: true });
-      if (issuesData) {
-        setCommonIssues(issuesData);
-      }
-
-      // Fetch Invoices with Customers and Devices
-      const { data: invoicesData } = await supabase
-        .from('tb_invoices')
-        .select(`
-          *,
-          customer:tb_customers(*),
-          device:tb_devices(*)
-        `)
-        .eq('shop_id', activeShop.id)
-        .order('date', { ascending: false });
-
-      if (invoicesData) {
-        const formattedInvoices: Invoice[] = invoicesData
-          .filter(inv => inv.customer && inv.device)
-          .map(inv => ({
-          id: inv.id,
-          shop_id: inv.shop_id,
-          invoiceNumber: inv.invoice_number,
-          date: inv.date,
-          customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
-          employeeId: inv.employee_id,
-          device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
-          price: inv.price,
-          warrantyMonths: inv.warranty_months,
-          status: inv.status as RepairStatus,
-          paymentStatus: inv.payment_status || 'Impayé',
-          notes: inv.notes
-        }));
-        setInvoices(formattedInvoices);
-      }
+      await fetchShopData(activeShop);
     }
 
-    if (user?.email === 'konedamaa@gmail.com') {
-      const { data: shops } = await supabase.from('tb_shops').select('*');
-      setAllShops(shops || []);
-    }
+    // Always fetch all shops
+    const { data: shops } = await supabase.from('tb_shops').select('*').order('created_at', { ascending: false });
+    setAllShops(shops || []);
 
     setLoading(false);
   };
 
   useEffect(() => {
+    // Initial domain detection
+    const dInfo = getDomainInfo();
+    setDomainInfo(dInfo);
+
+    // If on a dedicated domain or query param, try resolving public shop early
+    if (dInfo.slugOrDomain) {
+      supabase
+        .from('tb_shops')
+        .select('*')
+        .or(`slug.eq.${dInfo.slugOrDomain},custom_domain.eq.${dInfo.slugOrDomain}`)
+        .maybeSingle()
+        .then(({ data: matched }) => {
+          if (matched) {
+            setDomainShop(matched);
+            setCurrentShop(matched);
+          }
+        });
+    }
+
     // Check for dev bypass
     const isDevBypass = localStorage.getItem('dev_bypass') === 'true';
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (isDevBypass) {
-        setUser({ email: 'admin@tontonboua.com', id: 'dev-bypass-id' } as any);
+        setUser({ email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any);
         fetchData();
         return;
       }
@@ -182,7 +233,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (session?.user) {
         fetchData();
       } else {
-        setLoading(false);
+        // If domain is detected, fetch shop data anyway for public portal
+        if (dInfo.slugOrDomain) {
+          fetchData();
+        } else {
+          setLoading(false);
+        }
       }
     });
 
@@ -196,21 +252,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         fetchData();
       } else {
         // Clear data on logout
-        setCurrentShop(null);
-        setInvoices([]);
-        setEmployees([]);
-        setDeviceModels([]);
-        setCommonIssues([]);
-        setSettings(null);
+        if (!domainShop) {
+          setCurrentShop(null);
+          setInvoices([]);
+          setEmployees([]);
+          setDeviceModels([]);
+          setCommonIssues([]);
+          setSettings(null);
+        }
         setLoading(false);
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
   const forceLoginAsAdmin = () => {
     localStorage.setItem('dev_bypass', 'true');
-    setUser({ email: 'admin@tontonboua.com', id: 'dev-bypass-id' } as any);
+    setUser({ email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any);
     setSession({} as any);
     fetchData();
   };
@@ -226,6 +285,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+  };
+
+  const updateShopDomain = async (slug: string, customDomain: string, brandColor?: string) => {
+    if (!currentShop) return { success: false, error: 'Aucune boutique active.' };
+
+    const cleanSlug = slug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+    const cleanDomain = customDomain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+
+    const { error } = await supabase
+      .from('tb_shops')
+      .update({
+        slug: cleanSlug || null,
+        custom_domain: cleanDomain || null,
+        brand_color: brandColor || currentShop.brand_color || '#2563eb'
+      })
+      .eq('id', currentShop.id);
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    setCurrentShop({
+      ...currentShop,
+      slug: cleanSlug,
+      custom_domain: cleanDomain,
+      brand_color: brandColor || currentShop.brand_color
+    });
+
+    return { success: true };
   };
 
   const addInvoice = async (invoiceData: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>): Promise<boolean> => {
@@ -445,58 +533,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const { data: shop } = await supabase.from('tb_shops').select('*').eq('id', shopId).single();
     if (shop) {
       setCurrentShop(shop);
-      
-      const { data: settingsData } = await supabase.from('tb_shop_settings').select('*').eq('shop_id', shop.id).limit(1).maybeSingle();
-      setSettings(settingsData);
-
-      const { data: employeesData } = await supabase.from('tb_employees').select('*').eq('shop_id', shop.id);
-      setEmployees(employeesData || []);
-
-      const { data: modelsData } = await supabase.from('tb_device_models').select('*').eq('shop_id', shop.id).order('brand', { ascending: true });
-      setDeviceModels(modelsData || []);
-
-      const { data: issuesData } = await supabase.from('tb_common_issues').select('*').eq('shop_id', shop.id).order('name', { ascending: true });
-      setCommonIssues(issuesData || []);
-
-      const { data: invoicesData } = await supabase
-        .from('tb_invoices')
-        .select(`
-          *,
-          customer:tb_customers(*),
-          device:tb_devices(*)
-        `)
-        .eq('shop_id', shop.id)
-        .order('date', { ascending: false });
-
-      if (invoicesData) {
-        const formattedInvoices: Invoice[] = invoicesData
-          .filter(inv => inv.customer && inv.device)
-          .map(inv => ({
-            id: inv.id,
-            shop_id: inv.shop_id,
-            invoiceNumber: inv.invoice_number,
-            date: inv.date,
-            customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
-            employeeId: inv.employee_id,
-            device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
-            price: inv.price,
-            warrantyMonths: inv.warranty_months,
-            status: inv.status as RepairStatus,
-            paymentStatus: inv.payment_status || 'Impayé',
-            notes: inv.notes
-          }));
-        setInvoices(formattedInvoices);
-      } else {
-        setInvoices([]);
-      }
+      await fetchShopData(shop);
     }
     setLoading(false);
   };
 
-  const createShopWithManager = async (shopName: string, managerName: string, managerEmail: string, managerPassword: string) => {
+  const createShopWithManager = async (
+    shopName: string, 
+    managerName: string, 
+    managerEmail: string, 
+    managerPassword: string,
+    slug?: string,
+    customDomain?: string
+  ) => {
     if (!user) return { success: false, error: 'Utilisateur non connecté.' };
     
-    // 1. Create the user in auth schema using RPC
+    // 1. Try via full atomic RPC function
+    const { data: rpcResult, error: rpcErr } = await supabase.rpc('create_shop_and_manager', {
+      p_shop_name: shopName,
+      p_slug: slug || '',
+      p_custom_domain: customDomain || '',
+      p_manager_name: managerName,
+      p_manager_email: managerEmail,
+      p_manager_password: managerPassword
+    });
+
+    if (!rpcErr && rpcResult) {
+      if (rpcResult.success === false) {
+        return { success: false, error: rpcResult.error || 'Erreur création atelier.' };
+      }
+      // Refresh shops list
+      const { data: shops } = await supabase.from('tb_shops').select('*');
+      setAllShops(shops || []);
+      return { success: true };
+    }
+
+    // 2. Fallback to client-side creation if RPC is not available
     const { data: managerUserId, error: rpcError } = await supabase.rpc('create_user_admin', {
       new_email: managerEmail,
       new_password: managerPassword
@@ -507,10 +579,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: `Erreur création compte utilisateur : ${rpcError?.message || 'Inconnue'}` };
     }
 
-    // 2. Insert Shop with the newly created manager as owner
+    const autoSlug = (slug || shopName).toLowerCase().replace(/[^a-z0-9]/g, '-');
+
     const { data: shop, error: shopError } = await supabase.from('tb_shops').insert({
       name: shopName,
-      owner_id: managerUserId
+      owner_id: managerUserId,
+      slug: autoSlug,
+      custom_domain: customDomain ? customDomain.trim().toLowerCase() : null
     }).select().single();
 
     if (shopError || !shop) {
@@ -518,8 +593,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return { success: false, error: `Erreur création boutique: ${shopError?.message || 'Inconnue'}` };
     }
 
-    // 3. Insert Settings
-    const { error: settingsError } = await supabase.from('tb_shop_settings').insert({
+    await supabase.from('tb_shop_settings').insert({
       shop_id: shop.id,
       name: shopName,
       address: 'Adresse de la boutique',
@@ -528,39 +602,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       terms_and_conditions: 'Garantie de 3 mois sur toutes les réparations.'
     });
 
-    if (settingsError) {
-      console.error("Error creating shop settings:", settingsError);
-      await supabase.from('tb_shops').delete().eq('id', shop.id);
-      return { success: false, error: `Erreur création paramètres: ${settingsError.message}` };
-    }
-
-    // 4. Insert Employee
-    const { error: empError } = await supabase.from('tb_employees').insert({
+    await supabase.from('tb_employees').insert({
       shop_id: shop.id,
       name: managerName,
       email: managerEmail,
       role: 'Manager'
     });
 
-    if (empError) {
-      console.error("Error creating manager employee:", empError);
-      await supabase.from('tb_shops').delete().eq('id', shop.id);
-      return { success: false, error: `Erreur création manager: ${empError.message}` };
-    }
-
     // Refresh shops list
-    const { data: shops } = await supabase.from('tb_shops').select('*');
+    const { data: shops } = await supabase.from('tb_shops').select('*').order('created_at', { ascending: false });
     setAllShops(shops || []);
     return { success: true };
   };
 
+  const deleteShop = async (shopId: string) => {
+    try {
+      const { data: res, error: rpcErr } = await supabase.rpc('delete_shop_admin', {
+        p_shop_id: shopId
+      });
+
+      if (rpcErr || (res && res.success === false)) {
+        return { success: false, error: res?.error || rpcErr?.message || 'Erreur lors de la suppression de l\'atelier.' };
+      }
+
+      // Refresh shops list
+      const { data: shops } = await supabase.from('tb_shops').select('*').order('created_at', { ascending: false });
+      setAllShops(shops || []);
+
+      // If deleted current active shop, switch to first available
+      if (currentShop?.id === shopId) {
+        if (shops && shops.length > 0) {
+          setCurrentShop(shops[0]);
+          await fetchShopData(shops[0]);
+        } else {
+          setCurrentShop(null);
+        }
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || 'Erreur inattendue.' };
+    }
+  };
+
   return (
     <AppContext.Provider value={{ 
-      currentShop, invoices, employees, settings, deviceModels, commonIssues, 
+      currentShop, domainShop, domainInfo, invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
-      addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
+      updateShopDomain, addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
       loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager
+      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop
     }}>
       {children}
     </AppContext.Provider>

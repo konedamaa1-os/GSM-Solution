@@ -77,14 +77,14 @@ const Customers = () => {
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ padding: '0.5rem 1rem', backgroundColor: '#f3f4f6', borderRadius: '20px', fontSize: '0.875rem', fontWeight: 500 }}>
+                    <div style={{ padding: '0.5rem 1rem', backgroundColor: 'var(--surface-hover)', borderRadius: '20px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text-primary)' }}>
                       {invoices.length} {invoices.length > 1 ? 'réparations' : 'réparation'}
                     </div>
                     {isManager && (
                       <button 
                         onClick={() => handleDeleteCustomer(customer.id, customer.name)}
                         className="btn btn-secondary" 
-                        style={{ padding: '0.5rem', color: '#ef4444', border: '1px solid #fee2e2', backgroundColor: '#fef2f2' }}
+                        style={{ padding: '0.5rem', color: '#ef4444', border: '1px solid var(--border-color)', backgroundColor: 'var(--stat-red-bg)' }}
                         title="Supprimer le client"
                       >
                         <Trash2 size={16} />
@@ -102,7 +102,7 @@ const Customers = () => {
                       <Link 
                         key={invoice.id} 
                         to={`/facture/${invoice.id}`}
-                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}
+                        style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', backgroundColor: 'var(--surface-hover)', borderRadius: '8px', textDecoration: 'none', color: 'inherit' }}
                       >
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
