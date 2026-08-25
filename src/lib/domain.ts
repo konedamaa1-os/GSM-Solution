@@ -15,7 +15,8 @@ const ROOT_DOMAINS = [
   'vercel.app',
   'tontonboua.com',
   'gsmsolution.com',
-  'gsmsolution.xyz'
+  'gsmsolution.xyz',
+  'gsmsolutiondivo.xyz'
 ];
 
 export const getDomainInfo = (): DomainInfo => {
