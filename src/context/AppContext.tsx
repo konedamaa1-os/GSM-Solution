@@ -64,7 +64,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, employees]);
 
   const currentUserRole = activeEmployee ? activeEmployee.role : null;
-  const isSuperAdmin = user?.email === 'konedamaa@gmail.com';
+  const isSuperAdmin = user?.email === 'konedamaa@gmail.com' || localStorage.getItem('dev_bypass') === 'true';
   const isManager = currentUserRole === 'Manager' || 
                     (currentShop && user && currentShop.owner_id === user.id) || 
                     localStorage.getItem('dev_bypass') === 'true' ||
