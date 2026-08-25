@@ -269,22 +269,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <FileText size={20} />
             Catalogue
           </NavLink>
+          <NavLink to="/parametres" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <Settings size={20} />
+            Paramètres & Équipe
+          </NavLink>
           {isManager && (
-            <>
-              <NavLink to="/abonnement" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <CreditCard size={20} />
-                Abonnement
-              </NavLink>
-              <NavLink to="/parametres" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-                <Settings size={20} />
-                Paramètres & Domaine
-              </NavLink>
-            </>
+            <NavLink to="/abonnement" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <CreditCard size={20} />
+              Abonnement
+            </NavLink>
           )}
           {isSuperAdmin && (
             <NavLink to="/super-admin" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <Settings size={20} />
-              Super Admin
+              Console Super Admin
             </NavLink>
           )}
 
@@ -378,7 +376,7 @@ function App() {
                     <Route path="/clients" element={<Customers />} />
                     <Route path="/catalogue" element={<Catalog />} />
                     <Route path="/abonnement" element={<AdminRoute><Subscription /></AdminRoute>} />
-                    <Route path="/parametres" element={<AdminRoute><SettingsPage /></AdminRoute>} />
+                    <Route path="/parametres" element={<SettingsPage />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Layout>
