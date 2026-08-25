@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, NavLink, Navigate, Outlet } from 'react-router-dom';
 import { AppProvider, useAppContext } from './context/AppContext';
 import { Wrench, FileText, LayoutDashboard, Settings, Users, LogOut, CreditCard, Menu, X, Globe } from 'lucide-react';
 
@@ -315,7 +315,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </nav>
       <main className="main-content">
-        {children}
+        {children || <Outlet />}
       </main>
 
       {showGuide && <GuideModal onClose={() => setShowGuide(false)} />}
@@ -366,22 +366,20 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/" element={<HomeOrDashboard />} />
-            <Route path="*" element={
-              <ProtectedRoute>
-                <Layout>
-                  <Routes>
-                    <Route path="/nouvelle-facture" element={<CreateInvoice />} />
-                    <Route path="/reparations" element={<RepairTracking />} />
-                    <Route path="/facture/:id" element={<InvoiceView />} />
-                    <Route path="/clients" element={<Customers />} />
-                    <Route path="/catalogue" element={<Catalog />} />
-                    <Route path="/abonnement" element={<AdminRoute><Subscription /></AdminRoute>} />
-                    <Route path="/parametres" element={<SettingsPage />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                  </Routes>
-                </Layout>
-              </ProtectedRoute>
-            } />
+            
+            {/* Protected Application Routes with Layout */}
+            <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+              <Route path="/tableau-de-bord" element={<Dashboard />} />
+              <Route path="/nouvelle-facture" element={<CreateInvoice />} />
+              <Route path="/reparations" element={<RepairTracking />} />
+              <Route path="/facture/:id" element={<InvoiceView />} />
+              <Route path="/clients" element={<Customers />} />
+              <Route path="/catalogue" element={<Catalog />} />
+              <Route path="/abonnement" element={<Subscription />} />
+              <Route path="/parametres" element={<SettingsPage />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
       </BrowserRouter>
     </AppProvider>
