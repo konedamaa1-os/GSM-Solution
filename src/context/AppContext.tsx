@@ -743,6 +743,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     }
 
+    return { success: true };
+  };
+
   const updateEmployeePassword = async (email: string, newPassword: string) => {
     try {
       const cleanEmail = email.trim().toLowerCase();
