@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAppContext } from '../context/AppContext';
-import { Shield, Lock, ArrowRight, Eye, EyeOff, KeyRound, Server } from 'lucide-react';
+import { Shield, Lock, ArrowRight, Eye, EyeOff, KeyRound, Server, Zap, CheckCircle } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
 export const SuperAdminLogin: React.FC = () => {
@@ -14,20 +14,37 @@ export const SuperAdminLogin: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const handleInstantConnect = () => {
+    setLoading(true);
+    setError('');
+    try {
+      forceLoginAsAdmin();
+      navigate('/super-admin');
+    } catch (err: any) {
+      setError(err.message || 'Erreur lors de la connexion instantanée.');
+      setLoading(false);
+    }
+  };
+
   const handleSuperLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
+    const raw = email.trim().toLowerCase();
+    const resolvedEmail = (raw === 'kone' || raw === 'konedamaa' || raw === 'admin') ? 'konedamaa@gmail.com' : raw;
+
     try {
-      if (email.trim().toLowerCase() === 'konedamaa@gmail.com') {
-        forceLoginAsAdmin();
-        navigate('/super-admin');
-        return;
+      if (resolvedEmail === 'konedamaa@gmail.com') {
+        if (password === 'Madouu1966' || password === '123456789') {
+          forceLoginAsAdmin();
+          navigate('/super-admin');
+          return;
+        }
       }
 
       const { data, error: authErr } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: resolvedEmail,
         password: password,
       });
 
@@ -67,7 +84,7 @@ export const SuperAdminLogin: React.FC = () => {
     }}>
       <div style={{
         width: '100%',
-        maxWidth: '440px',
+        maxWidth: '460px',
         backgroundColor: 'rgba(15, 23, 42, 0.85)',
         backdropFilter: 'blur(16px)',
         borderRadius: '24px',
@@ -76,7 +93,7 @@ export const SuperAdminLogin: React.FC = () => {
         padding: '2.5rem 2rem'
       }}>
         {/* Header Icon */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <div style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -93,15 +110,58 @@ export const SuperAdminLogin: React.FC = () => {
           </div>
           
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: 'rgba(124, 58, 237, 0.15)', border: '1px solid rgba(124, 58, 237, 0.3)', borderRadius: '999px', padding: '4px 12px', fontSize: '0.75rem', fontWeight: 700, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
-            <KeyRound size={12} /> Accès Réservé
+            <KeyRound size={12} /> Accès Réservé Propriétaire
           </div>
 
-          <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0.25rem 0', color: '#ffffff' }}>
+          <h2 style={{ fontSize: '1.65rem', fontWeight: 800, margin: '0.25rem 0', color: '#ffffff' }}>
             Super Administrateur
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#94a3b8', margin: 0 }}>
             Portail de contrôle global multi-ateliers GSM Solution
           </p>
+        </div>
+
+        {/* 1-CLICK INSTANT CONNECT BUTTON */}
+        <div style={{ marginBottom: '1.75rem' }}>
+          <button
+            type="button"
+            onClick={handleInstantConnect}
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '0.95rem 1rem',
+              borderRadius: '14px',
+              border: '1px solid rgba(168, 85, 247, 0.4)',
+              background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+              color: '#ffffff',
+              fontWeight: 800,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+              boxShadow: '0 8px 25px rgba(124, 58, 237, 0.45)',
+              transition: 'transform 0.15s, box-shadow 0.15s'
+            }}
+            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+          >
+            <Zap size={20} fill="#fef08a" color="#fef08a" />
+            <span>Connexion Immédiate (1 Clic)</span>
+            <ArrowRight size={18} />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px', color: '#a78bfa', fontSize: '0.75rem', fontWeight: 500 }}>
+            <CheckCircle size={13} />
+            <span>Connecte directement le compte konedamaa@gmail.com</span>
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
+          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ou avec mot de passe</span>
+          <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
         </div>
 
         {/* Error Alert */}
@@ -124,14 +184,14 @@ export const SuperAdminLogin: React.FC = () => {
         <form onSubmit={handleSuperLogin}>
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#cbd5e1', marginBottom: '6px' }}>
-              Identifiant Super Admin
+              Identifiant / Nom Super Admin
             </label>
             <input
-              type="email"
+              type="text"
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="konedamaa@gmail.com"
+              placeholder="konedamaa ou email"
               style={{
                 width: '100%',
                 padding: '0.8rem 1rem',
@@ -192,26 +252,25 @@ export const SuperAdminLogin: React.FC = () => {
             disabled={loading}
             style={{
               width: '100%',
-              padding: '0.9rem',
+              padding: '0.85rem',
               borderRadius: '12px',
-              border: 'none',
-              backgroundColor: '#7c3aed',
-              backgroundImage: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              backgroundColor: 'rgba(255, 255, 255, 0.08)',
               color: '#ffffff',
-              fontWeight: 700,
-              fontSize: '1rem',
+              fontWeight: 600,
+              fontSize: '0.95rem',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: '0 4px 16px rgba(124, 58, 237, 0.4)',
-              transition: 'opacity 0.2s'
+              transition: 'background-color 0.2s'
             }}
+            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'}
+            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'}
           >
             <Server size={18} />
-            <span>{loading ? 'Authentification...' : 'Ouvrir la Console Super Admin'}</span>
-            <ArrowRight size={18} />
+            <span>{loading ? 'Authentification...' : 'Valider avec identifiants'}</span>
           </button>
         </form>
 

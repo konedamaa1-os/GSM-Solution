@@ -9,7 +9,7 @@ interface AppContextType extends AppState {
   domainInfo: DomainInfo;
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>) => Promise<boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
-  updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus']) => Promise<void>;
+  updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus'], collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string }) => Promise<void>;
   addEmployee: (employee: Omit<Employee, 'id' | 'shop_id'>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   updateSettings: (settings: ShopSettings) => Promise<void>;
@@ -19,13 +19,16 @@ interface AppContextType extends AppState {
   addCommonIssue: (issue: Omit<CommonIssue, 'id' | 'created_at' | 'shop_id'>) => Promise<void>;
   deleteCommonIssue: (id: string) => Promise<void>;
   forceLoginAsAdmin: () => void;
+  forceLoginAsUser: (email: string, id?: string) => void;
   logout: () => Promise<void>;
   loading: boolean;
   user: User | null;
   session: Session | null;
   currentUserRole: string | null;
   isManager: boolean;
+  isTechnician: boolean;
   deleteCustomer: (id: string) => Promise<{ error: any }>;
+  deleteInvoice: (id: string) => Promise<{ success: boolean; error?: string }>;
   activeEmployee: Employee | null;
   isSuperAdmin: boolean;
   allShops: Shop[];
@@ -67,14 +70,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [user, employees]);
 
   const currentUserRole = activeEmployee ? activeEmployee.role : null;
-  const isSuperAdmin = user?.email === 'konedamaa@gmail.com' || localStorage.getItem('dev_bypass') === 'true';
-  const isManager = currentUserRole === 'Manager' || 
-                    currentUserRole === 'Direction' ||
-                    currentUserRole === 'Admin' ||
-                    currentUserRole === null ||
-                    (currentShop && user && currentShop.owner_id === user.id) || 
-                    localStorage.getItem('dev_bypass') === 'true' ||
-                    user?.email === 'konedamaa@gmail.com';
+  const isSuperAdmin = Boolean(
+    (user?.email && user.email.trim().toLowerCase() === 'konedamaa@gmail.com') ||
+    (typeof window !== 'undefined' && localStorage.getItem('gsm_user_email')?.trim().toLowerCase() === 'konedamaa@gmail.com')
+  );
+
+  const isTechnician = Boolean(
+    activeEmployee && (
+      activeEmployee.role?.toLowerCase().includes('technic') ||
+      activeEmployee.role?.toLowerCase() === 'reparateur' ||
+      activeEmployee.role?.toLowerCase() === 'réparateur'
+    ) && !isSuperAdmin
+  );
+
+  const isManager = Boolean(
+    isSuperAdmin || 
+    (currentShop && user && currentShop.owner_id === user.id) ||
+    (!isTechnician && (
+      currentUserRole === 'Manager' || 
+      currentUserRole === 'Direction' ||
+      currentUserRole === 'Admin' ||
+      currentUserRole === 'Gérant' ||
+      !activeEmployee
+    ))
+  );
 
   const fetchShopData = async (activeShop: Shop) => {
     // Fetch Settings
@@ -139,6 +158,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         warrantyMonths: inv.warranty_months,
         status: inv.status as RepairStatus,
         paymentStatus: inv.payment_status || 'Impayé',
+        paymentCollectorId: inv.payment_collector_id || undefined,
+        paymentCollectorName: inv.payment_collector_name || undefined,
+        paymentMethod: inv.payment_method || undefined,
+        paidAt: inv.paid_at || undefined,
         notes: inv.notes
       }));
       setInvoices(formattedInvoices);
@@ -233,17 +256,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     // Initial domain detection
     const dInfo = getDomainInfo();
-    setDomainInfo(dInfo);
-
-    // Check for dev bypass
-    const isDevBypass = localStorage.getItem('dev_bypass') === 'true';
+    // Check for saved user session
+    const savedEmail = localStorage.getItem('gsm_user_email');
+    const savedId = localStorage.getItem('gsm_user_id');
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (isDevBypass) {
-        const devUser = { email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any;
-        setUser(devUser);
-        fetchData(devUser);
+      if (savedEmail) {
+        const customUser = { email: savedEmail, id: savedId || 'user-' + savedEmail } as any;
+        setUser(customUser);
+        fetchData(customUser);
         return;
       }
       
@@ -263,7 +285,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (localStorage.getItem('dev_bypass') === 'true') return;
+      if (localStorage.getItem('gsm_user_email')) return;
       
       setSession(session);
       setUser(session?.user ?? null);
@@ -287,10 +309,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const forceLoginAsAdmin = () => {
-    localStorage.setItem('dev_bypass', 'true');
-    setUser({ email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any);
+    localStorage.setItem('gsm_user_email', 'konedamaa@gmail.com');
+    localStorage.setItem('gsm_user_id', 'super-admin-id');
+    localStorage.removeItem('dev_bypass');
+    const adminUser = { email: 'konedamaa@gmail.com', id: 'super-admin-id' } as any;
+    setUser(adminUser);
     setSession({} as any);
-    fetchData();
+    fetchData(adminUser);
+  };
+
+  const forceLoginAsUser = (userEmail: string, userId?: string) => {
+    const clean = userEmail.trim().toLowerCase();
+    localStorage.setItem('gsm_user_email', clean);
+    localStorage.setItem('gsm_user_id', userId || 'emp-' + clean);
+    localStorage.removeItem('dev_bypass');
+    const mockUser = { email: clean, id: userId || 'emp-' + clean } as any;
+    setUser(mockUser);
+    setSession({} as any);
+    fetchData(mockUser);
   };
 
   useEffect(() => {
@@ -300,10 +336,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const logout = async () => {
+    localStorage.removeItem('gsm_user_email');
+    localStorage.removeItem('gsm_user_id');
     localStorage.removeItem('dev_bypass');
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
+    setCurrentShop(null);
+    setInvoices([]);
+    setEmployees([]);
+    setDeviceModels([]);
+    setCommonIssues([]);
+    setSettings(null);
   };
 
   const updateShopDomain = async (slug: string, customDomain: string, brandColor?: string) => {
@@ -399,6 +443,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
+    const isPaid = invoiceData.paymentStatus === 'Payé';
+    const paymentCollectorId = isPaid ? (invoiceData.paymentCollectorId || activeEmployee?.id || null) : null;
+    const paymentCollectorName = isPaid ? (invoiceData.paymentCollectorName || activeEmployee?.name || user?.email?.split('@')[0] || 'Technicien / Caisse') : null;
+    const paymentMethod = isPaid ? (invoiceData.paymentMethod || 'Espèces') : null;
+    const paidAt = isPaid ? (invoiceData.paidAt || new Date().toISOString()) : null;
+
     // Insert Invoice
     const { data: newInvData, error: invError } = await supabase.from('tb_invoices').insert({
       shop_id: currentShop.id,
@@ -410,6 +460,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       warranty_months: invoiceData.warrantyMonths,
       status: invoiceData.status,
       payment_status: invoiceData.paymentStatus,
+      payment_collector_id: paymentCollectorId,
+      payment_collector_name: paymentCollectorName,
+      payment_method: paymentMethod,
+      paid_at: paidAt,
       notes: invoiceData.notes
     }).select().single();
 
@@ -483,7 +537,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         invoiceNumber,
         date,
         customer: { ...finalCustomer, shop_id: currentShop.id },
-        device: deviceData || { ...invoiceData.device, shop_id: currentShop.id }
+        device: deviceData || { ...invoiceData.device, shop_id: currentShop.id },
+        paymentCollectorId: paymentCollectorId || undefined,
+        paymentCollectorName: paymentCollectorName || undefined,
+        paymentMethod: paymentMethod || undefined,
+        paidAt: paidAt || undefined
       };
       setInvoices([newInvoice, ...invoices]);
       return true;
@@ -498,10 +556,56 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const updateInvoicePaymentStatus = async (id: string, payment_status: Invoice['paymentStatus']) => {
-    const { error } = await supabase.from('tb_invoices').update({ payment_status }).eq('id', id);
+  const updateInvoicePaymentStatus = async (
+    id: string, 
+    payment_status: Invoice['paymentStatus'],
+    collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string }
+  ) => {
+    const isPaid = payment_status === 'Payé';
+    const targetInvoice = invoices.find(inv => inv.id === id);
+
+    // Strict Rule: Technicians CANNOT cancel/modify payment after 2 minutes (120 seconds)
+    if (!isManager && !isPaid && targetInvoice?.paymentStatus === 'Payé') {
+      const referenceTime = targetInvoice.paidAt || targetInvoice.date;
+      if (referenceTime) {
+        const diffSeconds = Math.floor((Date.now() - new Date(referenceTime).getTime()) / 1000);
+        if (diffSeconds > 120) {
+          alert("🔒 Délai de modification expiré (2 minutes) : Seul le gérant / manager peut modifier ou annuler un encaissement après 2 minutes.");
+          return;
+        }
+      }
+    }
+    
+    // Find active employee or fallback
+    let defaultCollectorName = activeEmployee?.name;
+    if (!defaultCollectorName && user?.email) {
+      const matchEmp = employees.find(e => e.email?.toLowerCase() === user.email?.toLowerCase());
+      defaultCollectorName = matchEmp?.name || user.email.split('@')[0];
+    }
+    if (!defaultCollectorName) defaultCollectorName = 'Technicien / Caisse';
+
+    const paymentCollectorId = isPaid ? (collectorInfo?.collectorId || activeEmployee?.id || null) : null;
+    const paymentCollectorName = isPaid ? (collectorInfo?.collectorName || defaultCollectorName) : null;
+    const paymentMethod = isPaid ? (collectorInfo?.paymentMethod || 'Espèces') : null;
+    const paidAt = isPaid ? new Date().toISOString() : null;
+
+    const { error } = await supabase.from('tb_invoices').update({ 
+      payment_status,
+      payment_collector_id: paymentCollectorId,
+      payment_collector_name: paymentCollectorName,
+      payment_method: paymentMethod,
+      paid_at: paidAt
+    }).eq('id', id);
+
     if (!error) {
-      setInvoices(invoices.map(inv => inv.id === id ? { ...inv, paymentStatus: payment_status } : inv));
+      setInvoices(invoices.map(inv => inv.id === id ? { 
+        ...inv, 
+        paymentStatus: payment_status,
+        paymentCollectorId: paymentCollectorId || undefined,
+        paymentCollectorName: paymentCollectorName || undefined,
+        paymentMethod: paymentMethod || undefined,
+        paidAt: paidAt || undefined
+      } : inv));
     }
   };
 
@@ -591,11 +695,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const deleteCustomer = async (id: string) => {
+    if (!isManager) {
+      alert("🔒 Action interdite : Seul le gérant / manager a l'autorisation de supprimer un client.");
+      return { error: { message: "Seul le gérant peut supprimer un client." } };
+    }
     const { error } = await supabase.from('tb_customers').delete().eq('id', id);
     if (!error) {
       setInvoices(invoices.filter(inv => inv.customer.id !== id));
     }
     return { error };
+  };
+
+  const deleteInvoice = async (id: string) => {
+    if (!isManager) {
+      alert("🔒 Action interdite : Les techniciens ne sont pas autorisés à supprimer les factures. Seul le gérant / manager peut effectuer cette opération.");
+      return { success: false, error: "Action réservée au gérant" };
+    }
+    const { error } = await supabase.from('tb_invoices').delete().eq('id', id);
+    if (!error) {
+      setInvoices(invoices.filter(inv => inv.id !== id));
+      return { success: true };
+    }
+    return { success: false, error: error.message };
   };
 
   const switchShop = async (shopId: string) => {
@@ -784,8 +905,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       currentShop, domainShop, domainInfo, invoices, employees, settings, deviceModels, commonIssues, 
       addInvoice, updateInvoiceStatus, updateInvoicePaymentStatus, addEmployee, deleteEmployee, updateSettings, 
       updateShopDomain, addDeviceModel, deleteDeviceModel, addCommonIssue, deleteCommonIssue,
-      loading, user, session, currentUserRole, isManager, deleteCustomer,
-      activeEmployee, forceLoginAsAdmin, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop, createTechnicianWithAccount, updateEmployeePassword
+      loading, user, session, currentUserRole, isManager, isTechnician, deleteCustomer, deleteInvoice,
+      activeEmployee, forceLoginAsAdmin, forceLoginAsUser, logout, isSuperAdmin, allShops, switchShop, createShopWithManager, deleteShop, createTechnicianWithAccount, updateEmployeePassword
     }}>
       {children}
     </AppContext.Provider>

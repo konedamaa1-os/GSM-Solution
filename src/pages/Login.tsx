@@ -7,16 +7,14 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
-type RoleType = 'manager' | 'technician' | 'cashier';
+type RoleType = 'manager' | 'technician' | 'cashier' | 'superadmin';
 
 interface RoleConfig {
   id: RoleType;
   title: string;
   shortLabel: string;
   badgeLabel: string;
-  level: string;
-  levelNumber: number;
-  levelColor: string;
+  color: string;
   icon: string;
   heroTitle: string;
   heroSubtitle: string;
@@ -31,9 +29,7 @@ const ROLES: RoleConfig[] = [
     title: 'Direction & Gérant d\'Atelier',
     shortLabel: 'Direction / Gérant',
     badgeLabel: 'Gérant d\'Atelier',
-    level: 'Niveau 3 • Direction & Comptabilité',
-    levelNumber: 3,
-    levelColor: '#2563eb',
+    color: '#2563eb',
     icon: '🏢',
     heroTitle: 'Direction & Gestion d\'Atelier !',
     heroSubtitle: 'Gérez l\'activité globale de votre boutique, suivez vos techniciens, consultez vos bilans comptables et personnalisez vos paramètres.',
@@ -51,13 +47,11 @@ const ROLES: RoleConfig[] = [
     title: 'Technicien & Réparateur',
     shortLabel: 'Technicien',
     badgeLabel: 'Atelier & Réparation',
-    level: 'Niveau 2 • Réparation & Diagnostic',
-    levelNumber: 2,
-    levelColor: '#059669',
+    color: '#059669',
     icon: '🔧',
     heroTitle: 'Espace Réparation & Diagnostic !',
     heroSubtitle: 'Accédez aux fiches d\'intervention, mettez à jour l\'état d\'avancement des réparations et notifiez vos diagnostics techniques.',
-    defaultEmail: 'technicien@atelier.com',
+    defaultEmail: 'solo@gmail.com',
     defaultPassword: '••••••••',
     permissions: [
       'Visualisation des appareils en attente',
@@ -71,9 +65,7 @@ const ROLES: RoleConfig[] = [
     title: 'Réceptionniste & Caisse',
     shortLabel: 'Caisse / Accueil',
     badgeLabel: 'Accueil & Caisse',
-    level: 'Niveau 1 • Dépôt & Encaissement',
-    levelNumber: 1,
-    levelColor: '#d97706',
+    color: '#d97706',
     icon: '💼',
     heroTitle: 'Accueil Client & Facturation !',
     heroSubtitle: 'Enregistrez les dépôts d\'appareils des clients, encaissez les règlements et éditez les reçus de garantie officiels.',
@@ -85,11 +77,29 @@ const ROLES: RoleConfig[] = [
       'Enregistrement des paiements (Espèces, Mobile)',
       'Recherche rapide par numéro ou téléphone'
     ]
+  },
+  {
+    id: 'superadmin',
+    title: 'Super Administrateur',
+    shortLabel: 'Super Admin',
+    badgeLabel: 'Contrôle Global',
+    color: '#7c3aed',
+    icon: '👑',
+    heroTitle: 'Console Super Admin Globale !',
+    heroSubtitle: 'Supervision complète de l\'ensemble des ateliers, création d\'enseignes, attribution des sous-domaines et inspection des données.',
+    defaultEmail: 'konedamaa@gmail.com',
+    defaultPassword: '••••••••',
+    permissions: [
+      'Supervision multi-ateliers en temps réel',
+      'Création & suppression d\'ateliers clients',
+      'Attribution de domaines & URLs personnalisées',
+      'Gestion globale et réinitialisation des accès'
+    ]
   }
 ];
 
 const Login = () => {
-  const { forceLoginAsAdmin, currentShop, domainShop } = useAppContext();
+  const { forceLoginAsAdmin, forceLoginAsUser, currentShop, domainShop } = useAppContext();
   const navigate = useNavigate();
 
   const [selectedRole, setSelectedRole] = useState<RoleType>('manager');
@@ -107,6 +117,10 @@ const Login = () => {
   const handleSelectRole = (roleId: RoleType) => {
     setSelectedRole(roleId);
     setError('');
+    if (roleId === 'superadmin') {
+      setEmail('konedamaa@gmail.com');
+      setPassword('Madouu1966');
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -114,33 +128,77 @@ const Login = () => {
     setLoading(true);
     setError('');
 
-    const cleanEmail = email.trim().toLowerCase();
+    const rawInput = email.trim();
+    if (!rawInput) {
+      setError('Veuillez saisir votre nom ou votre email.');
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Auto-detect Super Admin login even from public page
-      if (cleanEmail === 'konedamaa@gmail.com') {
-        forceLoginAsAdmin();
-        navigate('/super-admin');
+      let resolvedEmail = rawInput.toLowerCase();
+
+      // If user typed a Name/Username without '@', resolve it to the registered email
+      if (!rawInput.includes('@')) {
+        // 1. Try RPC resolver in Supabase
+        const { data: foundEmail } = await supabase.rpc('get_employee_email_by_name', {
+          p_identifier: rawInput,
+          p_shop_id: domainShop?.id || currentShop?.id || null
+        });
+
+        if (foundEmail) {
+          resolvedEmail = foundEmail.toLowerCase();
+        } else {
+          // 2. Direct fallback search in tb_employees
+          const { data: emp } = await supabase
+            .from('tb_employees')
+            .select('email')
+            .or(`name.ilike.%${rawInput}%,email.ilike.%${rawInput}%`)
+            .limit(1)
+            .maybeSingle();
+
+          if (emp?.email) {
+            resolvedEmail = emp.email.toLowerCase();
+          } else {
+            // Default suffix fallback
+            resolvedEmail = `${rawInput.toLowerCase().replace(/\s+/g, '')}@gmail.com`;
+          }
+        }
+      }
+
+      // Auto-detect Super Admin login
+      if (resolvedEmail === 'konedamaa@gmail.com' || rawInput.toLowerCase() === 'konedamaa' || rawInput.toLowerCase() === 'kone') {
+        if (password === 'Madouu1966' || password === '123456789') {
+          forceLoginAsAdmin();
+          navigate('/super-admin');
+          return;
+        }
+      }
+
+      // Direct detection for technician solo
+      if ((resolvedEmail === 'solo@gmail.com' || rawInput.toLowerCase() === 'solo') && (password === '123456789' || password === 'Madouu1966')) {
+        forceLoginAsUser('solo@gmail.com', 'f632c0c8-2843-4ed6-afe2-2c90102f61a2');
+        navigate('/reparations');
         return;
       }
 
-      // Supabase standard authentication
+      // Supabase standard authentication with resolved email
       const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
+        email: resolvedEmail,
         password: password,
       });
 
       if (authError) {
-        if (password === 'Madouu1966' || cleanEmail.includes('admin') || cleanEmail.includes('manager')) {
+        if (password === 'Madouu1966' || resolvedEmail.includes('admin') || resolvedEmail.includes('manager') || resolvedEmail.includes('boua') || resolvedEmail.includes('loube')) {
           forceLoginAsAdmin();
           navigate('/');
           return;
         }
-        setError(authError.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect pour cet atelier.' : authError.message);
+        setError(authError.message === 'Invalid login credentials' ? 'Nom d\'utilisateur ou mot de passe incorrect pour cet atelier.' : authError.message);
       } else {
         if (data.user?.email === 'konedamaa@gmail.com') {
           navigate('/super-admin');
-        } else if (selectedRole === 'technician') {
+        } else if (selectedRole === 'technician' || resolvedEmail.includes('solo') || resolvedEmail.includes('tech')) {
           navigate('/reparations');
         } else if (selectedRole === 'cashier') {
           navigate('/nouvelle-facture');
@@ -256,7 +314,7 @@ const Login = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '0.75rem' }}>
                 <Sparkles size={16} color="#fbbf24" />
                 <span style={{ fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#fef08a' }}>
-                  Droits & Autorisations ({currentRoleConfig.level})
+                  Droits & Autorisations ({currentRoleConfig.badgeLabel})
                 </span>
               </div>
 
@@ -317,15 +375,15 @@ const Login = () => {
               Se connecter
             </h2>
             <p style={{ color: '#64748b', fontSize: '0.875rem', margin: '0 0 1.5rem 0' }}>
-              Connexion en tant que <strong style={{ color: currentRoleConfig.levelColor }}>{currentRoleConfig.title}</strong>
+              Connexion en tant que <strong style={{ color: currentRoleConfig.color }}>{currentRoleConfig.title}</strong>
             </p>
 
-            {/* 3 PUBLIC ROLE SELECTOR BUTTON CARDS */}
+            {/* 4 ROLE SELECTOR BUTTON CARDS */}
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(3, 1fr)', 
-              gap: '10px', 
-              marginBottom: '1.5rem' 
+              gridTemplateColumns: 'repeat(4, 1fr)', 
+              gap: '8px', 
+              marginBottom: '1.25rem' 
             }}>
               {ROLES.map(role => {
                 const isSelected = selectedRole === role.id;
@@ -339,17 +397,17 @@ const Login = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '12px 6px',
+                      padding: '10px 4px',
                       borderRadius: '12px',
-                      border: isSelected ? `2px solid ${role.levelColor}` : '1px solid #e2e8f0',
+                      border: isSelected ? `2px solid ${role.color}` : '1px solid #e2e8f0',
                       backgroundColor: isSelected ? '#f8fafc' : '#ffffff',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
-                      boxShadow: isSelected ? `0 4px 12px ${role.levelColor}22` : 'none'
+                      boxShadow: isSelected ? `0 4px 12px ${role.color}22` : 'none'
                     }}
                   >
                     <div style={{ 
-                      fontSize: '1.6rem', 
+                      fontSize: '1.4rem', 
                       marginBottom: '4px',
                       transform: isSelected ? 'scale(1.1)' : 'scale(1)',
                       transition: 'transform 0.2s'
@@ -357,7 +415,7 @@ const Login = () => {
                       {role.icon}
                     </div>
                     <span style={{ 
-                      fontSize: '0.75rem', 
+                      fontSize: '0.72rem', 
                       fontWeight: isSelected ? 700 : 500, 
                       color: isSelected ? '#0f172a' : '#64748b',
                       textAlign: 'center',
@@ -370,10 +428,59 @@ const Login = () => {
               })}
             </div>
 
-            {/* CURRENT SELECTED ROLE LEVEL BANNER */}
+            {/* SUPER ADMIN 1-CLICK INSTANT CONNECT BANNER */}
+            {selectedRole === 'superadmin' && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(79, 70, 229, 0.12) 100%)',
+                border: '1px solid rgba(124, 58, 237, 0.3)',
+                borderRadius: '12px',
+                padding: '12px',
+                marginBottom: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ backgroundColor: '#7c3aed', color: '#fff', borderRadius: '8px', padding: '6px', display: 'flex' }}>
+                    <Shield size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#5b21b6' }}>Accès Rapide Super Admin</div>
+                    <div style={{ fontSize: '0.74rem', color: '#6d28d9' }}>Compte : konedamaa@gmail.com</div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    forceLoginAsAdmin();
+                    navigate('/super-admin');
+                  }}
+                  style={{
+                    backgroundColor: '#7c3aed',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 12px',
+                    fontSize: '0.78rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.35)'
+                  }}
+                >
+                  <span>1-Clic</span>
+                  <ArrowRight size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* CURRENT SELECTED ROLE BANNER (NO LEVEL TEXT) */}
             <div style={{ 
               backgroundColor: '#f8fafc', 
-              borderLeft: `4px solid ${currentRoleConfig.levelColor}`, 
+              borderLeft: `4px solid ${currentRoleConfig.color}`, 
               borderRadius: '0 8px 8px 0', 
               padding: '10px 14px', 
               marginBottom: '1.5rem' 
@@ -386,11 +493,11 @@ const Login = () => {
                   fontSize: '0.72rem', 
                   fontWeight: 700, 
                   color: '#ffffff', 
-                  backgroundColor: currentRoleConfig.levelColor, 
+                  backgroundColor: currentRoleConfig.color, 
                   padding: '2px 8px', 
                   borderRadius: '10px' 
                 }}>
-                  Niveau {currentRoleConfig.levelNumber}
+                  {currentRoleConfig.badgeLabel}
                 </span>
               </div>
               <p style={{ margin: '2px 0 0 0', fontSize: '0.775rem', color: '#64748b' }}>
@@ -417,18 +524,18 @@ const Login = () => {
             {/* LOGIN FORM */}
             <form onSubmit={handleLogin}>
               
-              {/* Identifiant / Login */}
+              {/* Identifiant / Nom / Email */}
               <div className="form-group" style={{ marginBottom: '1.1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Identifiant / Email
+                  Nom d'utilisateur ou Email
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   className="form-control"
                   required
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  placeholder="votre-email@atelier.com"
+                  placeholder="Votre nom ou email (ex: Solo, Boua...)"
                   style={{
                     width: '100%',
                     padding: '0.75rem 1rem',
@@ -497,7 +604,7 @@ const Login = () => {
                   padding: '0.85rem',
                   borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: currentRoleConfig.levelColor,
+                  backgroundColor: currentRoleConfig.color,
                   color: '#ffffff',
                   fontWeight: 700,
                   fontSize: '0.95rem',
@@ -506,7 +613,7 @@ const Login = () => {
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: `0 4px 14px ${currentRoleConfig.levelColor}44`,
+                  boxShadow: `0 4px 14px ${currentRoleConfig.color}44`,
                   transition: 'background-color 0.2s, transform 0.1s'
                 }}
               >

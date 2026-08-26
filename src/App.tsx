@@ -32,13 +32,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
   const { isManager } = useAppContext();
-  if (!isManager) return <Navigate to="/" replace />;
+  if (!isManager) return <Navigate to="/reparations" replace />;
   return <>{children}</>;
 };
 
 const SuperAdminRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isSuperAdmin } = useAppContext();
-  if (!isSuperAdmin) return <Navigate to="/" replace />;
+  const { isSuperAdmin, loading } = useAppContext();
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#090d16', color: 'white' }}>Vérification des droits Super Admin...</div>;
+  if (!isSuperAdmin) return <Navigate to="/reparations" replace />;
   return <>{children}</>;
 };
 
@@ -249,17 +250,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </button>
 
         <div className="nav-links">
-          <NavLink to="/" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`} end>
-            <LayoutDashboard size={20} />
-            Tableau de bord
+          {isManager && (
+            <NavLink to="/tableau-de-bord" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <LayoutDashboard size={20} />
+              Tableau de bord
+            </NavLink>
+          )}
+          <NavLink to="/reparations" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+            <Wrench size={20} />
+            Suivi Réparations
           </NavLink>
           <NavLink to="/nouvelle-facture" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <FileText size={20} />
             Nouvelle Facture
-          </NavLink>
-          <NavLink to="/reparations" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Wrench size={20} />
-            Suivi Réparations
           </NavLink>
           <NavLink to="/clients" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
             <Users size={20} />
@@ -269,10 +272,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <FileText size={20} />
             Catalogue
           </NavLink>
-          <NavLink to="/parametres" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
-            <Settings size={20} />
-            Paramètres & Équipe
-          </NavLink>
+          {isManager && (
+            <NavLink to="/parametres" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
+              <Settings size={20} />
+              Paramètres & Équipe
+            </NavLink>
+          )}
           {isManager && (
             <NavLink to="/abonnement" onClick={closeMobileMenu} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}>
               <CreditCard size={20} />
@@ -303,6 +308,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div style={{ flex: 1 }}></div>
           <div style={{ padding: '0 1rem', marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
             Connecté : <strong>{activeEmployee?.name || user?.email}</strong>
+            {activeEmployee?.role && (
+              <span style={{ display: 'block', fontSize: '0.75rem', color: isManager ? '#2563eb' : '#059669', fontWeight: 600 }}>
+                Rôle : {activeEmployee.role}
+              </span>
+            )}
           </div>
           <button 
             onClick={() => { closeMobileMenu(); logout(); }} 
@@ -323,14 +333,36 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+const ClientPortalWrapper = () => {
+  const { domainShop, currentShop } = useAppContext();
+  const activeShop = domainShop || currentShop;
+  if (!activeShop) return <Navigate to="/login" replace />;
+  return <ShopPortal shop={activeShop} />;
+};
+
 const HomeOrDashboard = () => {
-  const { user, loading, domainShop } = useAppContext();
+  const { user, loading, domainShop, isManager, isSuperAdmin } = useAppContext();
   
   if (loading) {
     return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#0f172a', color: 'white' }}>Chargement...</div>;
   }
   
   if (user) {
+    if (isSuperAdmin) {
+      return <Navigate to="/super-admin" replace />;
+    }
+
+    // Les techniciens sont directement redirigés vers l'espace atelier (Suivi des réparations)
+    if (!isManager) {
+      return (
+        <ProtectedRoute>
+          <Layout>
+            <RepairTracking />
+          </Layout>
+        </ProtectedRoute>
+      );
+    }
+
     return (
       <ProtectedRoute>
         <Layout>
@@ -340,12 +372,16 @@ const HomeOrDashboard = () => {
     );
   }
 
-  // If accessed via workshop domain / subdomain / ?shop=... and not logged in, show workshop portal
-  if (domainShop) {
+  // Si un client demande explicitement le suivi via paramètre ?portail=1 ou ?suivi=1
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const isPortalRequested = searchParams?.get('portail') === '1' || searchParams?.get('suivi') === '1';
+
+  if (domainShop && isPortalRequested) {
     return <ShopPortal shop={domainShop} />;
   }
   
-  return <LandingPage />;
+  // Redirection automatique de tous les sous-domaines d'ateliers (ex: loube.gsmsolutiondivo.xyz) vers l'espace équipe / connexion
+  return <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -358,6 +394,9 @@ function App() {
             <Route path="/inscription" element={<SignUp />} />
             <Route path="/mot-de-passe-oublie" element={<ForgotPassword />} />
             <Route path="/reinitialiser-mot-de-passe" element={<ResetPassword />} />
+            <Route path="/landing" element={<LandingPage />} />
+            <Route path="/portail-client" element={<ClientPortalWrapper />} />
+            <Route path="/suivi-client" element={<ClientPortalWrapper />} />
             <Route path="/super-admin" element={
               <ProtectedRoute>
                 <SuperAdminRoute>
@@ -369,17 +408,29 @@ function App() {
             
             {/* Protected Application Routes with Layout */}
             <Route element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-              <Route path="/tableau-de-bord" element={<Dashboard />} />
+              <Route path="/tableau-de-bord" element={
+                <AdminRoute>
+                  <Dashboard />
+                </AdminRoute>
+              } />
               <Route path="/nouvelle-facture" element={<CreateInvoice />} />
               <Route path="/reparations" element={<RepairTracking />} />
               <Route path="/facture/:id" element={<InvoiceView />} />
               <Route path="/clients" element={<Customers />} />
               <Route path="/catalogue" element={<Catalog />} />
-              <Route path="/abonnement" element={<Subscription />} />
-              <Route path="/parametres" element={<SettingsPage />} />
+              <Route path="/abonnement" element={
+                <AdminRoute>
+                  <Subscription />
+                </AdminRoute>
+              } />
+              <Route path="/parametres" element={
+                <AdminRoute>
+                  <SettingsPage />
+                </AdminRoute>
+              } />
             </Route>
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
       </BrowserRouter>
     </AppProvider>

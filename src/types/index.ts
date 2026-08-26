@@ -55,6 +55,10 @@ export interface Invoice {
   warrantyMonths: number;
   status: RepairStatus;
   paymentStatus: PaymentStatus;
+  paymentCollectorId?: string;
+  paymentCollectorName?: string;
+  paymentMethod?: string;
+  paidAt?: string;
   notes?: string;
 }
 
