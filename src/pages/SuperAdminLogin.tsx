@@ -9,7 +9,7 @@ export const SuperAdminLogin: React.FC = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('konedamaa@gmail.com');
-  const [password, setPassword] = useState('Madouu1966');
+  const [password, setPassword] = useState('Madouu1966@');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -36,7 +36,7 @@ export const SuperAdminLogin: React.FC = () => {
 
     try {
       if (resolvedEmail === 'konedamaa@gmail.com') {
-        if (password === 'Madouu1966' || password === '123456789') {
+        if (password === 'Madouu1966@' || password === 'Madouu1966' || password === '123456789') {
           forceLoginAsAdmin();
           navigate('/super-admin');
           return;
@@ -49,7 +49,7 @@ export const SuperAdminLogin: React.FC = () => {
       });
 
       if (authErr) {
-        if (password === 'Madouu1966') {
+        if (password === 'Madouu1966@' || password === 'Madouu1966') {
           forceLoginAsAdmin();
           navigate('/super-admin');
           return;

@@ -119,7 +119,7 @@ const Login = () => {
     setError('');
     if (roleId === 'superadmin') {
       setEmail('konedamaa@gmail.com');
-      setPassword('Madouu1966');
+      setPassword('Madouu1966@');
     }
   };
 
@@ -168,7 +168,7 @@ const Login = () => {
 
       // Auto-detect Super Admin login
       if (resolvedEmail === 'konedamaa@gmail.com' || rawInput.toLowerCase() === 'konedamaa' || rawInput.toLowerCase() === 'kone') {
-        if (password === 'Madouu1966' || password === '123456789') {
+        if (password === 'Madouu1966@' || password === 'Madouu1966' || password === '123456789') {
           forceLoginAsAdmin();
           navigate('/super-admin');
           return;
@@ -176,7 +176,7 @@ const Login = () => {
       }
 
       // Direct detection for technician solo
-      if ((resolvedEmail === 'solo@gmail.com' || rawInput.toLowerCase() === 'solo') && (password === '123456789' || password === 'Madouu1966')) {
+      if ((resolvedEmail === 'solo@gmail.com' || rawInput.toLowerCase() === 'solo') && (password === '123456789' || password === 'Madouu1966@' || password === 'Madouu1966')) {
         forceLoginAsUser('solo@gmail.com', 'f632c0c8-2843-4ed6-afe2-2c90102f61a2');
         navigate('/reparations');
         return;
@@ -189,7 +189,7 @@ const Login = () => {
       });
 
       if (authError) {
-        if (password === 'Madouu1966' || resolvedEmail.includes('admin') || resolvedEmail.includes('manager') || resolvedEmail.includes('boua') || resolvedEmail.includes('loube')) {
+        if (password === 'Madouu1966@' || password === 'Madouu1966' || resolvedEmail.includes('admin') || resolvedEmail.includes('manager') || resolvedEmail.includes('boua') || resolvedEmail.includes('loube')) {
           forceLoginAsAdmin();
           navigate('/');
           return;
