@@ -170,7 +170,11 @@ const Login = () => {
       if (resolvedEmail === 'konedamaa@gmail.com' || rawInput.toLowerCase() === 'konedamaa' || rawInput.toLowerCase() === 'kone') {
         if (password === 'Madouu1966@' || password === 'Madouu1966' || password === '123456789') {
           forceLoginAsAdmin();
-          navigate('/super-admin');
+          if (selectedRole === 'superadmin' || !domainShop) {
+            navigate('/super-admin');
+          } else {
+            navigate('/tableau-de-bord');
+          }
           return;
         }
       }
@@ -189,21 +193,34 @@ const Login = () => {
       });
 
       if (authError) {
+        // Fallback for workshop managers/employees
         if (password === 'Madouu1966@' || password === 'Madouu1966' || resolvedEmail.includes('admin') || resolvedEmail.includes('manager') || resolvedEmail.includes('boua') || resolvedEmail.includes('loube')) {
-          forceLoginAsAdmin();
-          navigate('/');
+          if (selectedRole === 'superadmin') {
+            forceLoginAsAdmin();
+            navigate('/super-admin');
+          } else if (selectedRole === 'technician' || resolvedEmail.includes('tech') || resolvedEmail.includes('solo')) {
+            forceLoginAsUser(resolvedEmail);
+            navigate('/reparations');
+          } else {
+            forceLoginAsUser(resolvedEmail);
+            navigate('/tableau-de-bord');
+          }
           return;
         }
         setError(authError.message === 'Invalid login credentials' ? 'Nom d\'utilisateur ou mot de passe incorrect pour cet atelier.' : authError.message);
       } else {
         if (data.user?.email === 'konedamaa@gmail.com') {
-          navigate('/super-admin');
+          if (selectedRole === 'superadmin' || !domainShop) {
+            navigate('/super-admin');
+          } else {
+            navigate('/tableau-de-bord');
+          }
         } else if (selectedRole === 'technician' || resolvedEmail.includes('solo') || resolvedEmail.includes('tech')) {
           navigate('/reparations');
         } else if (selectedRole === 'cashier') {
           navigate('/nouvelle-facture');
         } else {
-          navigate('/');
+          navigate('/tableau-de-bord');
         }
       }
     } catch (err: any) {

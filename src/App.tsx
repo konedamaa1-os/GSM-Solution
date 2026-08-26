@@ -348,7 +348,9 @@ const HomeOrDashboard = () => {
   }
   
   if (user) {
-    if (isSuperAdmin) {
+    // Si l'utilisateur est Super Admin sur le domaine principal, on le dirige vers la console Super Admin.
+    // Mais s'il visite un sous-domaine spécifique d'atelier (ex: boua.gsmsolutiondivo.xyz), il accède directement à l'espace de cet atelier.
+    if (isSuperAdmin && !domainShop) {
       return <Navigate to="/super-admin" replace />;
     }
 
