@@ -549,14 +549,9 @@ const Login = () => {
 
               {/* Mot de passe */}
               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>
-                    Mot de passe
-                  </label>
-                  <Link to="/mot-de-passe-oublie" style={{ fontSize: '0.78rem', color: '#2563eb', textDecoration: 'none', fontWeight: 500 }}>
-                    Mot de passe oublié ?
-                  </Link>
-                </div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                  Mot de passe
+                </label>
                 
                 <div style={{ position: 'relative' }}>
                   <input
@@ -620,6 +615,24 @@ const Login = () => {
                 <span>{loading ? 'Connexion en cours...' : `Se connecter (${currentRoleConfig.shortLabel})`}</span>
                 <ArrowRight size={18} />
               </button>
+
+              {/* Mot de passe oublié déplacé en bas */}
+              <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <Link 
+                  to="/mot-de-passe-oublie" 
+                  style={{ 
+                    fontSize: '0.82rem', 
+                    color: '#64748b', 
+                    textDecoration: 'none', 
+                    fontWeight: 500,
+                    transition: 'color 0.2s'
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.color = '#2563eb'}
+                  onMouseOut={(e) => e.currentTarget.style.color = '#64748b'}
+                >
+                  Mot de passe oublié ?
+                </Link>
+              </div>
             </form>
           </div>
 
