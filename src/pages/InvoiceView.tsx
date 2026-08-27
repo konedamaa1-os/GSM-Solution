@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
+import { supabase } from '../lib/supabase';
 import { Printer, ArrowLeft, Phone, Mail, MapPin, CheckCircle2, DollarSign, CreditCard, UserCheck, X as CloseIcon, Receipt, FileText, Wrench, Smartphone, User, ShieldAlert } from 'lucide-react';
 
 const PAYMENT_METHODS = [
@@ -33,10 +34,69 @@ const InvoiceView = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const invoice = invoices.find(i => i.id === id);
+  const contextInvoice = invoices.find(i => i.id === id);
+  const [directInvoice, setDirectInvoice] = useState<any>(null);
+  const [fetchingDirect, setFetchingDirect] = useState(false);
+
+  React.useEffect(() => {
+    if (!contextInvoice && id) {
+      setFetchingDirect(true);
+      supabase
+        .from('tb_invoices')
+        .select(`
+          *,
+          customer:tb_customers(*),
+          device:tb_devices(*)
+        `)
+        .eq('id', id)
+        .maybeSingle()
+        .then(({ data, error }) => {
+          setFetchingDirect(false);
+          if (data) {
+            const dev = Array.isArray(data.device) ? data.device[0] : data.device;
+            const cust = Array.isArray(data.customer) ? data.customer[0] : data.customer;
+            setDirectInvoice({
+              id: data.id,
+              shop_id: data.shop_id,
+              invoiceNumber: data.invoice_number,
+              date: data.date,
+              customer: cust || { name: 'Client', phone: '' },
+              device: dev || { brand: '', model: '', issue: '' },
+              employeeId: data.employee_id,
+              price: data.price,
+              warrantyMonths: data.warranty_months || 0,
+              status: data.status,
+              paymentStatus: data.payment_status,
+              paymentCollectorId: data.payment_collector_id,
+              paymentCollectorName: data.payment_collector_name,
+              paymentMethod: data.payment_method,
+              paidAt: data.paid_at,
+              notes: data.notes
+            });
+          }
+        });
+    }
+  }, [contextInvoice, id]);
+
+  const invoice = contextInvoice || directInvoice;
+
+  if (fetchingDirect) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
+        <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>🧾 Chargement du Petit Reçu...</div>
+      </div>
+    );
+  }
 
   if (!invoice) {
-    return <div style={{ padding: '2rem', textAlign: 'center' }}>Facture introuvable.</div>;
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center' }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>Facture / Reçu introuvable</div>
+        <button className="btn btn-primary" onClick={() => navigate('/reparations')}>
+          Voir la liste des réparations
+        </button>
+      </div>
+    );
   }
 
   const techEmployee = employees.find(e => e.id === invoice.employeeId);

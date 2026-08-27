@@ -228,18 +228,35 @@ export const ShopPortal: React.FC<ShopPortalProps> = ({ shop }) => {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', background: '#ffffff', padding: '1rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                         <div>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Panne signalée</span>
-                          <p style={{ margin: '4px 0 0 0', fontWeight: 500, color: '#1e293b' }}>{device?.issue || 'Non spécifiée'}</p>
+                          <p style={{ margin: '4px 0 0 0', fontWeight: 700, color: '#1e293b' }}>{device?.issue || 'Non spécifiée'}</p>
                         </div>
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Garantie</span>
-                          <p style={{ margin: '4px 0 0 0', fontWeight: 500, color: '#1e293b' }}>{inv.warranty_months} mois</p>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Paiement</span>
-                          <p style={{ margin: '4px 0 0 0', fontWeight: 600, color: inv.payment_status === 'Payé' ? '#16a34a' : '#ea580c' }}>
-                            {inv.payment_status || 'Impayé'} ({Number(inv.price).toLocaleString('fr-FR')} FCFA)
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Règlement</span>
+                          <p style={{ margin: '4px 0 0 0', fontWeight: 800, color: inv.payment_status === 'Payé' ? '#16a34a' : '#ea580c' }}>
+                            {inv.payment_status === 'Payé' ? '✅ Payé' : '⏳ Impayé (au retrait)'} ({Number(inv.price).toLocaleString('fr-FR')} FCFA)
                           </p>
                         </div>
+                      </div>
+
+                      <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
+                        <Link
+                          to={`/facture/${inv.id}`}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            backgroundColor: brandColor,
+                            color: '#ffffff',
+                            padding: '8px 18px',
+                            borderRadius: '8px',
+                            fontWeight: 700,
+                            fontSize: '0.875rem',
+                            textDecoration: 'none',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.1)'
+                          }}
+                        >
+                          🧾 Voir le Petit Reçu ➔
+                        </Link>
                       </div>
                     </div>
                   );
