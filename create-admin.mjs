@@ -8,7 +8,7 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey);
 async function createAdmin() {
   const { data, error } = await supabase.auth.signUp({
     email: 'konedamaa@gmail.com',
-    password: 'Madouu1966@'
+    password: 'Madouu1966@@'
   });
 
   if (error) {

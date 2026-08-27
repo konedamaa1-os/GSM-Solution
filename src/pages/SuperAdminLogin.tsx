@@ -9,15 +9,82 @@ export const SuperAdminLogin: React.FC = () => {
   const navigate = useNavigate();
 
   const [email, setEmail] = useState('konedamaa@gmail.com');
-  const [password, setPassword] = useState('Madouu1966@');
+  const [password, setPassword] = useState('Madouu1966@@');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Rate Limiting Security: 3 attempts -> 15 seconds lockout
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    const saved = localStorage.getItem('gsm_admin_failed_attempts');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
+
+  // Check saved lockout on mount
+  React.useEffect(() => {
+    const savedLockout = localStorage.getItem('gsm_admin_lockout_until');
+    if (savedLockout) {
+      const remaining = Math.ceil((parseInt(savedLockout, 10) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setLockoutCountdown(remaining);
+      } else {
+        localStorage.removeItem('gsm_admin_lockout_until');
+        localStorage.removeItem('gsm_admin_failed_attempts');
+      }
+    }
+  }, []);
+
+  // Countdown timer for lockout
+  React.useEffect(() => {
+    if (lockoutCountdown <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutCountdown((prev) => {
+        if (prev <= 1) {
+          localStorage.removeItem('gsm_admin_lockout_until');
+          localStorage.removeItem('gsm_admin_failed_attempts');
+          setFailedAttempts(0);
+          setError('');
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutCountdown]);
+
+  const recordFailedAttempt = (customMsg?: string) => {
+    const nextAttempts = failedAttempts + 1;
+    setFailedAttempts(nextAttempts);
+    localStorage.setItem('gsm_admin_failed_attempts', nextAttempts.toString());
+
+    if (nextAttempts >= 3) {
+      const lockUntil = Date.now() + 15000;
+      localStorage.setItem('gsm_admin_lockout_until', lockUntil.toString());
+      setLockoutCountdown(15);
+      setError('🔒 Sécurité anti-intrusion : 3 tentatives infructueuses. Connexion verrouillée pendant 15 secondes.');
+    } else {
+      setError(customMsg || `Identifiants administrateur incorrects. (${nextAttempts}/3 tentatives avant verrouillage)`);
+    }
+  };
+
+  const clearLockoutAndAttempts = () => {
+    setFailedAttempts(0);
+    setLockoutCountdown(0);
+    localStorage.removeItem('gsm_admin_failed_attempts');
+    localStorage.removeItem('gsm_admin_lockout_until');
+  };
+
   const handleInstantConnect = () => {
+    if (lockoutCountdown > 0) {
+      setError(`🔒 Connexion verrouillée. Veuillez attendre ${lockoutCountdown} seconde(s).`);
+      return;
+    }
     setLoading(true);
     setError('');
     try {
+      clearLockoutAndAttempts();
       forceLoginAsAdmin();
       navigate('/super-admin');
     } catch (err: any) {
@@ -28,43 +95,57 @@ export const SuperAdminLogin: React.FC = () => {
 
   const handleSuperLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (lockoutCountdown > 0) {
+      setError(`🔒 Connexion verrouillée. Veuillez attendre ${lockoutCountdown} seconde(s).`);
+      return;
+    }
+
     setLoading(true);
     setError('');
 
     const raw = email.trim().toLowerCase();
     const resolvedEmail = (raw === 'kone' || raw === 'konedamaa' || raw === 'admin') ? 'konedamaa@gmail.com' : raw;
+    const cleanPassword = password.trim();
+    const isSuperAdminPassword = cleanPassword === 'Madouu1966@@' || cleanPassword === 'Madouu1966@' || cleanPassword === 'Madouu1966' || cleanPassword === '123456789';
 
     try {
       if (resolvedEmail === 'konedamaa@gmail.com') {
-        if (password === 'Madouu1966@' || password === 'Madouu1966' || password === '123456789') {
+        if (isSuperAdminPassword) {
+          clearLockoutAndAttempts();
           forceLoginAsAdmin();
           navigate('/super-admin');
+          return;
+        } else {
+          recordFailedAttempt('Mot de passe administrateur incorrect.');
           return;
         }
       }
 
       const { data, error: authErr } = await supabase.auth.signInWithPassword({
         email: resolvedEmail,
-        password: password,
+        password: cleanPassword,
       });
 
       if (authErr) {
-        if (password === 'Madouu1966@' || password === 'Madouu1966') {
+        if (isSuperAdminPassword) {
+          clearLockoutAndAttempts();
           forceLoginAsAdmin();
           navigate('/super-admin');
           return;
         }
-        setError(authErr.message === 'Invalid login credentials' ? 'Identifiants administrateur incorrects.' : authErr.message);
+        recordFailedAttempt(authErr.message === 'Invalid login credentials' ? 'Identifiants administrateur incorrects.' : authErr.message);
       } else {
         if (data.user?.email === 'konedamaa@gmail.com') {
+          clearLockoutAndAttempts();
           forceLoginAsAdmin();
           navigate('/super-admin');
         } else {
-          setError('Ce compte n\'a pas les privilèges Super Administrateur.');
+          recordFailedAttempt('Ce compte n\'a pas les privilèges Super Administrateur.');
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Erreur inattendue.');
+      recordFailedAttempt(err.message || 'Erreur inattendue.');
     } finally {
       setLoading(false);
     }
@@ -126,30 +207,34 @@ export const SuperAdminLogin: React.FC = () => {
           <button
             type="button"
             onClick={handleInstantConnect}
-            disabled={loading}
+            disabled={loading || lockoutCountdown > 0}
             style={{
               width: '100%',
               padding: '0.95rem 1rem',
               borderRadius: '14px',
               border: '1px solid rgba(168, 85, 247, 0.4)',
-              background: 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+              background: lockoutCountdown > 0 ? '#475569' : 'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
               color: '#ffffff',
               fontWeight: 800,
               fontSize: '1rem',
-              cursor: 'pointer',
+              cursor: lockoutCountdown > 0 ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '10px',
-              boxShadow: '0 8px 25px rgba(124, 58, 237, 0.45)',
+              boxShadow: lockoutCountdown > 0 ? 'none' : '0 8px 25px rgba(124, 58, 237, 0.45)',
               transition: 'transform 0.15s, box-shadow 0.15s'
             }}
-            onMouseOver={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
-            onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
           >
-            <Zap size={20} fill="#fef08a" color="#fef08a" />
-            <span>Connexion Immédiate (1 Clic)</span>
-            <ArrowRight size={18} />
+            {lockoutCountdown > 0 ? (
+              <span>⏳ Verrouillé ({lockoutCountdown}s)</span>
+            ) : (
+              <>
+                <Zap size={20} fill="#fef08a" color="#fef08a" />
+                <span>Connexion Immédiate (1 Clic)</span>
+                <ArrowRight size={18} />
+              </>
+            )}
           </button>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginTop: '8px', color: '#a78bfa', fontSize: '0.75rem', fontWeight: 500 }}>
             <CheckCircle size={13} />
@@ -164,8 +249,33 @@ export const SuperAdminLogin: React.FC = () => {
           <div style={{ flex: 1, height: '1px', backgroundColor: 'rgba(255, 255, 255, 0.1)' }} />
         </div>
 
+        {/* LOCKOUT SECURITY BANNER */}
+        {lockoutCountdown > 0 && (
+          <div style={{
+            backgroundColor: 'rgba(239, 68, 68, 0.15)',
+            border: '1px solid rgba(239, 68, 68, 0.4)',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '1.5rem',
+            color: '#fca5a5',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}>
+            <div style={{ backgroundColor: '#ef4444', color: '#fff', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>
+              🔒
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Sécurité anti-intrusion activée</div>
+              <div style={{ fontSize: '0.8rem', color: '#fca5a5', marginTop: '2px' }}>
+                3 tentatives infructueuses. Déverrouillage dans <strong style={{ color: '#ef4444', fontSize: '0.95rem' }}>{lockoutCountdown}s</strong>...
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Error Alert */}
-        {error && (
+        {error && lockoutCountdown === 0 && (
           <div style={{
             backgroundColor: 'rgba(239, 68, 68, 0.15)',
             border: '1px solid rgba(239, 68, 68, 0.3)',
@@ -189,6 +299,7 @@ export const SuperAdminLogin: React.FC = () => {
             <input
               type="text"
               required
+              disabled={loading || lockoutCountdown > 0}
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="konedamaa ou email"
@@ -200,7 +311,8 @@ export const SuperAdminLogin: React.FC = () => {
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
                 color: '#ffffff',
                 fontSize: '0.95rem',
-                outline: 'none'
+                outline: 'none',
+                cursor: lockoutCountdown > 0 ? 'not-allowed' : 'text'
               }}
             />
           </div>
@@ -213,6 +325,7 @@ export const SuperAdminLogin: React.FC = () => {
               <input
                 type={showPassword ? 'text' : 'password'}
                 required
+                disabled={loading || lockoutCountdown > 0}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -224,11 +337,13 @@ export const SuperAdminLogin: React.FC = () => {
                   backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   color: '#ffffff',
                   fontSize: '0.95rem',
-                  outline: 'none'
+                  outline: 'none',
+                  cursor: lockoutCountdown > 0 ? 'not-allowed' : 'text'
                 }}
               />
               <button
                 type="button"
+                disabled={lockoutCountdown > 0}
                 onClick={() => setShowPassword(!showPassword)}
                 style={{
                   position: 'absolute',
@@ -238,7 +353,7 @@ export const SuperAdminLogin: React.FC = () => {
                   background: 'none',
                   border: 'none',
                   color: '#94a3b8',
-                  cursor: 'pointer',
+                  cursor: lockoutCountdown > 0 ? 'not-allowed' : 'pointer',
                   padding: '4px'
                 }}
               >
@@ -249,28 +364,26 @@ export const SuperAdminLogin: React.FC = () => {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || lockoutCountdown > 0}
             style={{
               width: '100%',
               padding: '0.85rem',
               borderRadius: '12px',
               border: '1px solid rgba(255, 255, 255, 0.15)',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
+              backgroundColor: lockoutCountdown > 0 ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.08)',
               color: '#ffffff',
               fontWeight: 600,
               fontSize: '0.95rem',
-              cursor: 'pointer',
+              cursor: lockoutCountdown > 0 ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
               transition: 'background-color 0.2s'
             }}
-            onMouseOver={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'}
-            onMouseOut={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)'}
           >
             <Server size={18} />
-            <span>{loading ? 'Authentification...' : 'Valider avec identifiants'}</span>
+            <span>{lockoutCountdown > 0 ? `Verrouillé (${lockoutCountdown}s)` : (loading ? 'Authentification...' : 'Valider avec identifiants')}</span>
           </button>
         </form>
 

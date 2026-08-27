@@ -26,12 +26,12 @@ interface RoleConfig {
 const ROLES: RoleConfig[] = [
   {
     id: 'manager',
-    title: 'Direction & Gérant d\'Atelier',
-    shortLabel: 'Direction / Gérant',
-    badgeLabel: 'Gérant d\'Atelier',
+    title: 'Administrateur & Direction d\'Atelier',
+    shortLabel: 'Administrateur',
+    badgeLabel: 'Administrateur',
     color: '#2563eb',
     icon: '🏢',
-    heroTitle: 'Direction & Gestion d\'Atelier !',
+    heroTitle: 'Espace Administrateur & Direction !',
     heroSubtitle: 'Gérez l\'activité globale de votre boutique, suivez vos techniciens, consultez vos bilans comptables et personnalisez vos paramètres.',
     defaultEmail: 'manager@atelier.com',
     defaultPassword: '••••••••',
@@ -92,6 +92,68 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Rate Limiting Security: 3 attempts -> 15 seconds lockout
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    const saved = localStorage.getItem('gsm_failed_attempts');
+    return saved ? parseInt(saved, 10) : 0;
+  });
+  const [lockoutCountdown, setLockoutCountdown] = useState(0);
+
+  // Check saved lockout on mount
+  React.useEffect(() => {
+    const savedLockout = localStorage.getItem('gsm_lockout_until');
+    if (savedLockout) {
+      const remaining = Math.ceil((parseInt(savedLockout, 10) - Date.now()) / 1000);
+      if (remaining > 0) {
+        setLockoutCountdown(remaining);
+      } else {
+        localStorage.removeItem('gsm_lockout_until');
+        localStorage.removeItem('gsm_failed_attempts');
+      }
+    }
+  }, []);
+
+  // Countdown timer for lockout
+  React.useEffect(() => {
+    if (lockoutCountdown <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutCountdown((prev) => {
+        if (prev <= 1) {
+          localStorage.removeItem('gsm_lockout_until');
+          localStorage.removeItem('gsm_failed_attempts');
+          setFailedAttempts(0);
+          setError('');
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutCountdown]);
+
+  const recordFailedAttempt = (customMsg?: string) => {
+    const nextAttempts = failedAttempts + 1;
+    setFailedAttempts(nextAttempts);
+    localStorage.setItem('gsm_failed_attempts', nextAttempts.toString());
+
+    if (nextAttempts >= 3) {
+      const lockUntil = Date.now() + 15000;
+      localStorage.setItem('gsm_lockout_until', lockUntil.toString());
+      setLockoutCountdown(15);
+      setError('🔒 Sécurité activée : 3 tentatives échouées. Veuillez patienter 15 secondes avant de réessayer.');
+    } else {
+      setError(customMsg || `Identifiants incorrects. (${nextAttempts}/3 tentatives avant blocage temporaire de 15s)`);
+    }
+  };
+
+  const clearLockoutAndAttempts = () => {
+    setFailedAttempts(0);
+    setLockoutCountdown(0);
+    localStorage.removeItem('gsm_failed_attempts');
+    localStorage.removeItem('gsm_lockout_until');
+  };
+
   const currentRoleConfig = ROLES.find(r => r.id === selectedRole) || ROLES[0];
   const activeShopName = domainShop?.name || currentShop?.name || 'GSM SOLUTION';
 
@@ -103,6 +165,12 @@ const Login = () => {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (lockoutCountdown > 0) {
+      setError(`🔒 Connexion verrouillée. Veuillez attendre ${lockoutCountdown} seconde(s).`);
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -144,21 +212,25 @@ const Login = () => {
         }
       }
 
-      // Auto-detect Super Admin login
+      // Auto-detect Super Admin login (Konedamaa@gmail.com with Madouu1966@@)
+      const cleanPassword = password.trim();
+      const isSuperAdminPassword = cleanPassword === 'Madouu1966@@' || cleanPassword === 'Madouu1966@' || cleanPassword === 'Madouu1966' || cleanPassword === '123456789';
+
       if (resolvedEmail === 'konedamaa@gmail.com' || rawInput.toLowerCase() === 'konedamaa' || rawInput.toLowerCase() === 'kone') {
-        if (password === 'Madouu1966@' || password === 'Madouu1966' || password === '123456789') {
+        if (isSuperAdminPassword) {
+          clearLockoutAndAttempts();
           forceLoginAsAdmin();
-          if (selectedRole === 'superadmin' || !domainShop) {
-            navigate('/super-admin');
-          } else {
-            navigate('/tableau-de-bord');
-          }
+          navigate('/super-admin');
+          return;
+        } else {
+          recordFailedAttempt('Mot de passe administrateur incorrect.');
           return;
         }
       }
 
       // Direct detection for technician solo
-      if ((resolvedEmail === 'solo@gmail.com' || rawInput.toLowerCase() === 'solo') && (password === '123456789' || password === 'Madouu1966@' || password === 'Madouu1966')) {
+      if ((resolvedEmail === 'solo@gmail.com' || rawInput.toLowerCase() === 'solo') && (cleanPassword === '123456789' || isSuperAdminPassword)) {
+        clearLockoutAndAttempts();
         forceLoginAsUser('solo@gmail.com', 'f632c0c8-2843-4ed6-afe2-2c90102f61a2');
         navigate('/reparations');
         return;
@@ -167,13 +239,14 @@ const Login = () => {
       // Supabase standard authentication with resolved email
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: resolvedEmail,
-        password: password,
+        password: cleanPassword,
       });
 
       if (authError) {
         // Fallback for workshop managers/employees
-        if (password === 'Madouu1966@' || password === 'Madouu1966' || resolvedEmail.includes('admin') || resolvedEmail.includes('manager') || resolvedEmail.includes('boua') || resolvedEmail.includes('loube')) {
-          if (selectedRole === 'superadmin') {
+        if (isSuperAdminPassword || resolvedEmail.includes('admin') || resolvedEmail.includes('manager') || resolvedEmail.includes('boua') || resolvedEmail.includes('loube')) {
+          clearLockoutAndAttempts();
+          if (resolvedEmail === 'konedamaa@gmail.com') {
             forceLoginAsAdmin();
             navigate('/super-admin');
           } else if (selectedRole === 'technician' || resolvedEmail.includes('tech') || resolvedEmail.includes('solo')) {
@@ -185,14 +258,11 @@ const Login = () => {
           }
           return;
         }
-        setError(authError.message === 'Invalid login credentials' ? 'Nom d\'utilisateur ou mot de passe incorrect pour cet atelier.' : authError.message);
+        recordFailedAttempt(authError.message === 'Invalid login credentials' ? 'Nom d\'utilisateur ou mot de passe incorrect.' : authError.message);
       } else {
+        clearLockoutAndAttempts();
         if (data.user?.email === 'konedamaa@gmail.com') {
-          if (selectedRole === 'superadmin' || !domainShop) {
-            navigate('/super-admin');
-          } else {
-            navigate('/tableau-de-bord');
-          }
+          navigate('/super-admin');
         } else if (selectedRole === 'technician' || resolvedEmail.includes('solo') || resolvedEmail.includes('tech')) {
           navigate('/reparations');
         } else if (selectedRole === 'cashier') {
@@ -202,7 +272,7 @@ const Login = () => {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Une erreur inattendue est survenue.');
+      recordFailedAttempt(err.message || 'Une erreur inattendue est survenue.');
     } finally {
       setLoading(false);
     }
@@ -451,8 +521,33 @@ const Login = () => {
               </p>
             </div>
 
+            {/* LOCKOUT SECURITY BANNER */}
+            {lockoutCountdown > 0 && (
+              <div style={{
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                borderRadius: '12px',
+                padding: '1rem',
+                marginBottom: '1.25rem',
+                color: '#b91c1c',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <div style={{ backgroundColor: '#ef4444', color: '#fff', borderRadius: '50%', width: '28px', height: '28px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, flexShrink: 0 }}>
+                  🔒
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>Sécurité anti-intrusion activée</div>
+                  <div style={{ fontSize: '0.8rem', color: '#991b1b', marginTop: '2px' }}>
+                    3 tentatives infructueuses. Déverrouillage automatique dans <strong style={{ color: '#dc2626', fontSize: '0.95rem' }}>{lockoutCountdown}s</strong>...
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* ERROR ALERT */}
-            {error && (
+            {error && lockoutCountdown === 0 && (
               <div style={{ 
                 backgroundColor: '#fef2f2', 
                 color: '#991b1b', 
@@ -479,6 +574,7 @@ const Login = () => {
                   type="text"
                   className="form-control"
                   required
+                  disabled={loading || lockoutCountdown > 0}
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   placeholder="Votre nom ou email (ex: Solo, Boua...)"
@@ -488,7 +584,9 @@ const Login = () => {
                     borderRadius: '10px',
                     border: '1px solid #cbd5e1',
                     fontSize: '0.9rem',
-                    outline: 'none'
+                    outline: 'none',
+                    backgroundColor: lockoutCountdown > 0 ? '#f1f5f9' : '#ffffff',
+                    cursor: lockoutCountdown > 0 ? 'not-allowed' : 'text'
                   }}
                 />
               </div>
@@ -504,6 +602,7 @@ const Login = () => {
                     type={showPassword ? 'text' : 'password'}
                     className="form-control"
                     required
+                    disabled={loading || lockoutCountdown > 0}
                     value={password}
                     onChange={e => setPassword(e.target.value)}
                     placeholder="••••••••"
@@ -513,11 +612,14 @@ const Login = () => {
                       borderRadius: '10px',
                       border: '1px solid #cbd5e1',
                       fontSize: '0.9rem',
-                      outline: 'none'
+                      outline: 'none',
+                      backgroundColor: lockoutCountdown > 0 ? '#f1f5f9' : '#ffffff',
+                      cursor: lockoutCountdown > 0 ? 'not-allowed' : 'text'
                     }}
                   />
                   <button
                     type="button"
+                    disabled={lockoutCountdown > 0}
                     onClick={() => setShowPassword(!showPassword)}
                     style={{
                       position: 'absolute',
@@ -527,7 +629,7 @@ const Login = () => {
                       background: 'none',
                       border: 'none',
                       color: '#94a3b8',
-                      cursor: 'pointer',
+                      cursor: lockoutCountdown > 0 ? 'not-allowed' : 'pointer',
                       padding: '4px'
                     }}
                   >
@@ -539,27 +641,33 @@ const Login = () => {
               {/* Submit button */}
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || lockoutCountdown > 0}
                 style={{
                   width: '100%',
                   padding: '0.85rem',
                   borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: currentRoleConfig.color,
+                  backgroundColor: lockoutCountdown > 0 ? '#94a3b8' : currentRoleConfig.color,
                   color: '#ffffff',
                   fontWeight: 700,
                   fontSize: '0.95rem',
-                  cursor: 'pointer',
+                  cursor: lockoutCountdown > 0 ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: `0 4px 14px ${currentRoleConfig.color}44`,
+                  boxShadow: lockoutCountdown > 0 ? 'none' : `0 4px 14px ${currentRoleConfig.color}44`,
                   transition: 'background-color 0.2s, transform 0.1s'
                 }}
               >
-                <span>{loading ? 'Connexion en cours...' : `Se connecter (${currentRoleConfig.shortLabel})`}</span>
-                <ArrowRight size={18} />
+                {lockoutCountdown > 0 ? (
+                  <span>⏳ Veuillez patienter ({lockoutCountdown}s)</span>
+                ) : (
+                  <>
+                    <span>{loading ? 'Connexion en cours...' : `Se connecter (${currentRoleConfig.shortLabel})`}</span>
+                    <ArrowRight size={18} />
+                  </>
+                )}
               </button>
 
               {/* Mot de passe oublié déplacé en bas */}
