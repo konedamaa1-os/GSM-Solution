@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 
-type RoleType = 'manager' | 'technician' | 'cashier' | 'superadmin';
+type RoleType = 'manager' | 'technician' | 'cashier';
 
 interface RoleConfig {
   id: RoleType;
@@ -77,24 +77,6 @@ const ROLES: RoleConfig[] = [
       'Enregistrement des paiements (Espèces, Mobile)',
       'Recherche rapide par numéro ou téléphone'
     ]
-  },
-  {
-    id: 'superadmin',
-    title: 'Super Administrateur',
-    shortLabel: 'Super Admin',
-    badgeLabel: 'Contrôle Global',
-    color: '#7c3aed',
-    icon: '👑',
-    heroTitle: 'Console Super Admin Globale !',
-    heroSubtitle: 'Supervision complète de l\'ensemble des ateliers, création d\'enseignes, attribution des sous-domaines et inspection des données.',
-    defaultEmail: 'konedamaa@gmail.com',
-    defaultPassword: '••••••••',
-    permissions: [
-      'Supervision multi-ateliers en temps réel',
-      'Création & suppression d\'ateliers clients',
-      'Attribution de domaines & URLs personnalisées',
-      'Gestion globale et réinitialisation des accès'
-    ]
   }
 ];
 
@@ -117,10 +99,6 @@ const Login = () => {
   const handleSelectRole = (roleId: RoleType) => {
     setSelectedRole(roleId);
     setError('');
-    if (roleId === 'superadmin') {
-      setEmail('konedamaa@gmail.com');
-      setPassword('Madouu1966@');
-    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -395,12 +373,12 @@ const Login = () => {
               Connexion en tant que <strong style={{ color: currentRoleConfig.color }}>{currentRoleConfig.title}</strong>
             </p>
 
-            {/* 4 ROLE SELECTOR BUTTON CARDS */}
+            {/* 3 ROLE SELECTOR BUTTON CARDS */}
             <div style={{ 
               display: 'grid', 
-              gridTemplateColumns: 'repeat(4, 1fr)', 
-              gap: '8px', 
-              marginBottom: '1.25rem' 
+              gridTemplateColumns: 'repeat(3, 1fr)', 
+              gap: '10px', 
+              marginBottom: '1.5rem' 
             }}>
               {ROLES.map(role => {
                 const isSelected = selectedRole === role.id;
@@ -414,7 +392,7 @@ const Login = () => {
                       flexDirection: 'column',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      padding: '10px 4px',
+                      padding: '12px 6px',
                       borderRadius: '12px',
                       border: isSelected ? `2px solid ${role.color}` : '1px solid #e2e8f0',
                       backgroundColor: isSelected ? '#f8fafc' : '#ffffff',
@@ -424,7 +402,7 @@ const Login = () => {
                     }}
                   >
                     <div style={{ 
-                      fontSize: '1.4rem', 
+                      fontSize: '1.6rem', 
                       marginBottom: '4px',
                       transform: isSelected ? 'scale(1.1)' : 'scale(1)',
                       transition: 'transform 0.2s'
@@ -432,7 +410,7 @@ const Login = () => {
                       {role.icon}
                     </div>
                     <span style={{ 
-                      fontSize: '0.72rem', 
+                      fontSize: '0.75rem', 
                       fontWeight: isSelected ? 700 : 500, 
                       color: isSelected ? '#0f172a' : '#64748b',
                       textAlign: 'center',
@@ -444,55 +422,6 @@ const Login = () => {
                 );
               })}
             </div>
-
-            {/* SUPER ADMIN 1-CLICK INSTANT CONNECT BANNER */}
-            {selectedRole === 'superadmin' && (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.12) 0%, rgba(79, 70, 229, 0.12) 100%)',
-                border: '1px solid rgba(124, 58, 237, 0.3)',
-                borderRadius: '12px',
-                padding: '12px',
-                marginBottom: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '10px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ backgroundColor: '#7c3aed', color: '#fff', borderRadius: '8px', padding: '6px', display: 'flex' }}>
-                    <Shield size={16} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#5b21b6' }}>Accès Rapide Super Admin</div>
-                    <div style={{ fontSize: '0.74rem', color: '#6d28d9' }}>Compte : konedamaa@gmail.com</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    forceLoginAsAdmin();
-                    navigate('/super-admin');
-                  }}
-                  style={{
-                    backgroundColor: '#7c3aed',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 12px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.35)'
-                  }}
-                >
-                  <span>1-Clic</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-            )}
 
             {/* CURRENT SELECTED ROLE BANNER (NO LEVEL TEXT) */}
             <div style={{ 
