@@ -10,13 +10,9 @@ import {
   Tablet,
   DollarSign,
   Wrench,
-  ShieldCheck,
   Sparkles,
   ArrowLeft,
   ArrowRight,
-  Lock,
-  Eye,
-  EyeOff,
   CheckCircle2,
   AlertCircle,
   RotateCcw,
@@ -152,7 +148,7 @@ const DEVICE_TYPES = [
 const STEPS = [
   { id: 1, title: 'Informations Client & Contacts', icon: User, desc: 'Identité et 3 numéros' },
   { id: 2, title: 'Détails de l\'Appareil & Panne', icon: Smartphone, desc: 'Marque, modèle & diagnostic' },
-  { id: 3, title: 'Attribution & Facturation', icon: DollarSign, desc: 'Technicien, prix & garantie' }
+  { id: 3, title: 'Attribution & Facturation', icon: DollarSign, desc: 'Technicien, montant & encaissement' }
 ];
 
 interface RegularCustomerProfile {
@@ -173,7 +169,6 @@ const CreateInvoice = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [selectedDeviceType, setSelectedDeviceType] = useState('Smartphone');
   const [validationError, setValidationError] = useState('');
 
@@ -196,7 +191,7 @@ const CreateInvoice = () => {
     deviceAccessories: '',
     employeeId: activeEmployee ? activeEmployee.id : (employees.length > 0 ? employees[0].id : ''),
     price: '',
-    warrantyMonths: '3',
+    warrantyMonths: '0',
     notes: '',
     paymentStatus: 'Impayé' as 'Payé' | 'Impayé',
     paymentCollectorId: activeEmployee ? activeEmployee.id : (employees.length > 0 ? employees[0].id : ''),
@@ -452,7 +447,7 @@ const CreateInvoice = () => {
         deviceAccessories: '',
         employeeId: activeEmployee ? activeEmployee.id : (employees.length > 0 ? employees[0].id : ''),
         price: '',
-        warrantyMonths: '3',
+        warrantyMonths: '0',
         notes: ''
       });
       setSelectedCustomerOption('manual');
@@ -1224,43 +1219,7 @@ const CreateInvoice = () => {
                   )}
                 </div>
 
-                {/* IMEI & Code PIN */}
-                <div className="form-row" style={{ marginBottom: '1.25rem' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.85rem' }}>
-                      N° Série / IMEI (Optionnel)
-                    </label>
-                    <input 
-                      type="text" 
-                      name="deviceSerial" 
-                      autoComplete="off"
-                      data-lpignore="true"
-                      data-form-type="other"
-                      className="form-control" 
-                      placeholder="3568912..." 
-                      value={formData.deviceSerial} 
-                      onChange={handleChange} 
-                      style={{ textTransform: 'uppercase' }}
-                    />
-                  </div>
 
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label" style={{ fontSize: '0.85rem' }}>
-                      Code PIN / Schéma de déverrouillage (Optionnel)
-                    </label>
-                    <input 
-                      type="text" 
-                      name="devicePassword" 
-                      autoComplete="new-password"
-                      data-lpignore="true"
-                      data-form-type="other"
-                      className="form-control" 
-                      placeholder="ex: 1234, Schéma en L..." 
-                      value={formData.devicePassword} 
-                      onChange={handleChange} 
-                    />
-                  </div>
-                </div>
 
                 {/* Accessoires laissés */}
                 <div className="form-group" style={{ marginBottom: '1.5rem' }}>
@@ -1414,40 +1373,7 @@ const CreateInvoice = () => {
                   </div>
                 </div>
 
-                {/* Garantie Offerte */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label className="form-label" style={{ fontWeight: 700, marginBottom: '8px' }}>
-                    Garantie offerte sur la réparation
-                  </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                    {WARRANTY_OPTIONS.map(opt => {
-                      const isSelected = formData.warrantyMonths === opt.value;
-                      return (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, warrantyMonths: opt.value }))}
-                          style={{
-                            padding: '8px 14px',
-                            borderRadius: '8px',
-                            fontSize: '0.85rem',
-                            fontWeight: isSelected ? 700 : 500,
-                            backgroundColor: isSelected ? '#f0fdf4' : '#f8fafc',
-                            color: isSelected ? '#15803d' : '#475569',
-                            border: isSelected ? '1.5px solid #22c55e' : '1px solid #e2e8f0',
-                            cursor: 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px'
-                          }}
-                        >
-                          <ShieldCheck size={16} color={isSelected ? '#16a34a' : '#94a3b8'} />
-                          {opt.label}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+
 
                 {/* Modalités de Règlement & Encaissement */}
                 <div style={{ marginBottom: '1.5rem', backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -1693,7 +1619,7 @@ const CreateInvoice = () => {
                 </div>
               </div>
 
-              {/* Résumé Étape 3 : Montant & Garantie */}
+              {/* Résumé Étape 3 : Montant */}
               <div style={{
                 background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
                 color: '#ffffff',
@@ -1702,16 +1628,9 @@ const CreateInvoice = () => {
                 marginBottom: '1.25rem',
                 boxShadow: '0 8px 20px rgba(49, 46, 129, 0.25)'
               }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#c7d2fe', fontWeight: 600 }}>TOTAL FACTURÉ</span>
-                  <span style={{
-                    fontSize: '0.72rem',
-                    backgroundColor: 'rgba(255,255,255,0.15)',
-                    padding: '2px 8px',
-                    borderRadius: '6px',
-                    color: '#e0e7ff'
-                  }}>
-                    🛡️ Garantie : {formData.warrantyMonths === '0' ? 'Aucune' : `${formData.warrantyMonths} mois`}
+                <div style={{ marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#c7d2fe', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    TOTAL FACTURÉ CONVENU
                   </span>
                 </div>
                 

@@ -311,8 +311,6 @@ const InvoiceView = () => {
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
             <div><span style={{ color: 'var(--text-secondary)' }}>Marque & Modèle :</span> <b>{invoice.device.brand} {invoice.device.model}</b></div>
-            <div><span style={{ color: 'var(--text-secondary)' }}>N° de Série / IMEI :</span> {invoice.device.serialNumber || 'Non renseigné'}</div>
-            <div><span style={{ color: 'var(--text-secondary)' }}>Code de déverrouillage :</span> {invoice.device.password || 'Non communiqué'}</div>
             <div><span style={{ color: 'var(--text-secondary)' }}>Accessoires laissés :</span> {invoice.device.accessories || 'Aucun'}</div>
             <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Panne déclarée :</span>
@@ -329,7 +327,6 @@ const InvoiceView = () => {
             <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
               <tr>
                 <th style={{ padding: '1rem', textAlign: 'left' }}>Description des prestations</th>
-                <th style={{ padding: '1rem', textAlign: 'center' }}>Garantie</th>
                 <th style={{ padding: '1rem', textAlign: 'right' }}>Montant</th>
               </tr>
             </thead>
@@ -339,7 +336,6 @@ const InvoiceView = () => {
                   <strong>Réparation technique & Main d'œuvre</strong><br />
                   <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Appareil : {invoice.device.brand} {invoice.device.model} ({invoice.device.issue})</span>
                 </td>
-                <td style={{ padding: '1rem', textAlign: 'center', fontWeight: 600 }}>{invoice.warrantyMonths} mois</td>
                 <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary-color)' }}>
                   {invoice.price.toLocaleString()} FCFA
                 </td>
