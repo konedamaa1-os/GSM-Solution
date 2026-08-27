@@ -301,7 +301,7 @@ const CreateInvoice = () => {
     if (found) {
       setFormData(prev => ({
         ...prev,
-        customerName: found.customer.name || '',
+        customerName: (found.customer.name || '').toUpperCase(),
         customerPhone: found.customer.phone || '',
         customerPhone2: found.customer.phone2 || '',
         customerPhone3: found.customer.phone3 || ''
@@ -325,7 +325,7 @@ const CreateInvoice = () => {
     setCustomModelMode(false);
     setFormData(prev => ({
       ...prev,
-      deviceBrand: val,
+      deviceBrand: val.toUpperCase(),
       deviceModel: '' // Réinitialiser le modèle pour forcer le choix dans la nouvelle marque
     }));
   };
@@ -342,7 +342,7 @@ const CreateInvoice = () => {
     }
 
     setCustomModelMode(false);
-    setFormData(prev => ({ ...prev, deviceModel: val }));
+    setFormData(prev => ({ ...prev, deviceModel: val.toUpperCase() }));
   };
 
   // 4. GESTION LISTE DÉROULANTE PANNE
@@ -360,7 +360,7 @@ const CreateInvoice = () => {
     const commonIssueObj = commonIssues.find(i => i.name.toLowerCase() === val.toLowerCase());
     setFormData(prev => ({
       ...prev,
-      deviceIssue: val,
+      deviceIssue: val.toUpperCase(),
       price: commonIssueObj?.default_price ? commonIssueObj.default_price.toString() : prev.price
     }));
   };
@@ -369,23 +369,39 @@ const CreateInvoice = () => {
     setValidationError('');
     const { name, value } = e.target;
     
+    // Champs automatiquement convertis en MAJUSCULE
+    let processedValue = value;
+    const uppercaseFields = [
+      'customerName',
+      'deviceBrand',
+      'deviceModel',
+      'deviceSerial',
+      'deviceIssue',
+      'deviceIssueDescription',
+      'deviceAccessories',
+      'notes'
+    ];
+    if (uppercaseFields.includes(name)) {
+      processedValue = value.toUpperCase();
+    }
+    
     // Auto-fill price if a common issue with default price is selected
     if (name === 'deviceIssue') {
-      const issue = commonIssues.find(i => i.name.toLowerCase() === value.trim().toLowerCase());
+      const issue = commonIssues.find(i => i.name.toLowerCase() === processedValue.trim().toLowerCase());
       if (issue && issue.default_price) {
-        setFormData(prev => ({ ...prev, [name]: value, price: issue.default_price!.toString() }));
+        setFormData(prev => ({ ...prev, [name]: processedValue, price: issue.default_price!.toString() }));
         return;
       }
     }
     
     setFormData(prev => {
-      const newData = { ...prev, [name]: value };
+      const newData = { ...prev, [name]: processedValue };
       
       // Auto-remplissage des contacts si le téléphone correspond à un client existant
       if (name === 'customerPhone') {
-        const found = regularCustomersList.find(c => c.customer.phone === value.trim());
+        const found = regularCustomersList.find(c => c.customer.phone === processedValue.trim());
         if (found) {
-          newData.customerName = found.customer.name;
+          newData.customerName = (found.customer.name || '').toUpperCase();
           newData.customerPhone2 = found.customer.phone2 || '';
           newData.customerPhone3 = found.customer.phone3 || '';
           setRecognizedCustomer(found);
@@ -401,20 +417,21 @@ const CreateInvoice = () => {
   };
 
   const handleToggleAccessory = (acc: string) => {
+    const accUpper = acc.toUpperCase();
     setFormData(prev => {
       let current = prev.deviceAccessories.trim();
       if (acc === 'Aucun accessoire') {
-        return { ...prev, deviceAccessories: 'Aucun accessoire' };
+        return { ...prev, deviceAccessories: 'AUCUN ACCESSOIRE' };
       }
-      if (current === 'Aucun accessoire') {
+      if (current === 'AUCUN ACCESSOIRE' || current === 'Aucun accessoire') {
         current = '';
       }
-      const list = current ? current.split(',').map(s => s.trim()).filter(Boolean) : [];
-      if (list.includes(acc)) {
-        const updated = list.filter(item => item !== acc);
+      const list = current ? current.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
+      if (list.includes(accUpper)) {
+        const updated = list.filter(item => item !== accUpper);
         return { ...prev, deviceAccessories: updated.join(', ') };
       } else {
-        list.push(acc);
+        list.push(accUpper);
         return { ...prev, deviceAccessories: list.join(', ') };
       }
     });
@@ -539,7 +556,7 @@ const CreateInvoice = () => {
       const newInvoice = {
         customer: {
           id: crypto.randomUUID(),
-          name: formData.customerName.trim(),
+          name: formData.customerName.trim().toUpperCase(),
           phone: formData.customerPhone.trim(),
           phone2: formData.customerPhone2.trim() || undefined,
           phone3: formData.customerPhone3.trim() || undefined,
@@ -547,12 +564,12 @@ const CreateInvoice = () => {
           address: ''
         },
         device: {
-          brand: formData.deviceBrand.trim(),
-          model: formData.deviceModel.trim(),
-          serialNumber: formData.deviceSerial.trim(),
-          issue: formData.deviceIssue.trim(),
+          brand: formData.deviceBrand.trim().toUpperCase(),
+          model: formData.deviceModel.trim().toUpperCase(),
+          serialNumber: formData.deviceSerial.trim().toUpperCase(),
+          issue: formData.deviceIssue.trim().toUpperCase(),
           password: formData.devicePassword.trim(),
-          accessories: formData.deviceAccessories.trim(),
+          accessories: formData.deviceAccessories.trim().toUpperCase(),
         },
         employeeId: formData.employeeId,
         price: Number(formData.price) || 0,
@@ -563,7 +580,7 @@ const CreateInvoice = () => {
         paymentCollectorName: formData.paymentStatus === 'Payé' ? (employees.find(e => e.id === formData.paymentCollectorId)?.name || activeEmployee?.name || user?.email?.split('@')[0] || 'Collaborateur') : undefined,
         paymentMethod: formData.paymentStatus === 'Payé' ? formData.paymentMethod : undefined,
         paidAt: formData.paymentStatus === 'Payé' ? new Date().toISOString() : undefined,
-        notes: formData.notes.trim()
+        notes: formData.notes.trim().toUpperCase()
       };
       
       const success = await addInvoice(newInvoice as any);

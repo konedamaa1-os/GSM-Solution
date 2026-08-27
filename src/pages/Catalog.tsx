@@ -18,7 +18,7 @@ const Catalog = () => {
   const handleAddModel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newBrand || !newModel) return;
-    await addDeviceModel({ brand: newBrand, model: newModel });
+    await addDeviceModel({ brand: newBrand.trim().toUpperCase(), model: newModel.trim().toUpperCase() });
     setNewBrand('');
     setNewModel('');
   };
@@ -27,7 +27,7 @@ const Catalog = () => {
     e.preventDefault();
     if (!newIssueName) return;
     await addCommonIssue({ 
-      name: newIssueName, 
+      name: newIssueName.trim().toUpperCase(), 
       default_price: newIssuePrice ? parseFloat(newIssuePrice) : undefined 
     });
     setNewIssueName('');
@@ -69,9 +69,10 @@ const Catalog = () => {
                   type="text" 
                   className="form-control" 
                   value={newBrand} 
-                  onChange={e => setNewBrand(e.target.value)} 
+                  onChange={e => setNewBrand(e.target.value.toUpperCase())} 
                   required 
-                  placeholder="Apple"
+                  placeholder="APPLE"
+                  style={{ textTransform: 'uppercase' }}
                 />
               </div>
               <div className="form-group">
@@ -80,9 +81,10 @@ const Catalog = () => {
                   type="text" 
                   className="form-control" 
                   value={newModel} 
-                  onChange={e => setNewModel(e.target.value)} 
+                  onChange={e => setNewModel(e.target.value.toUpperCase())} 
                   required 
-                  placeholder="iPhone 13 Pro"
+                  placeholder="IPHONE 13 PRO"
+                  style={{ textTransform: 'uppercase' }}
                 />
               </div>
               <button type="submit" className="btn btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
@@ -128,9 +130,10 @@ const Catalog = () => {
                   type="text" 
                   className="form-control" 
                   value={newIssueName} 
-                  onChange={e => setNewIssueName(e.target.value)} 
+                  onChange={e => setNewIssueName(e.target.value.toUpperCase())} 
                   required 
-                  placeholder="Remplacement Écran"
+                  placeholder="REMPLACEMENT ÉCRAN"
+                  style={{ textTransform: 'uppercase' }}
                 />
               </div>
               <div className="form-group">

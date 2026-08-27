@@ -51,6 +51,8 @@ const Settings = () => {
     e.preventDefault();
     updateSettings({
       ...shopSettings,
+      name: shopSettings.name.trim().toUpperCase(),
+      address: shopSettings.address.trim().toUpperCase(),
       shop_id: currentShop?.id || ''
     });
     setMessage('Paramètres et contacts de l\'atelier enregistrés avec succès !');
@@ -78,12 +80,13 @@ const Settings = () => {
       return;
     }
 
+    const upperName = newEmployeeName.trim().toUpperCase();
     setCreatingEmployee(true);
     setErrorMessage('');
     setMessage('');
 
     const res = await createTechnicianWithAccount(
-      newEmployeeName.trim(),
+      upperName,
       newEmployeeEmail.trim(),
       newEmployeePassword.trim(),
       newEmployeePhone.trim() || undefined,
@@ -94,7 +97,7 @@ const Settings = () => {
 
     if (res.success) {
       setEmployeeCreatedCard({
-        name: newEmployeeName.trim(),
+        name: upperName,
         email: newEmployeeEmail.trim().toLowerCase(),
         password: newEmployeePassword.trim(),
         role: newEmployeeRole
@@ -182,7 +185,8 @@ const Settings = () => {
                 type="text" 
                 className="form-control" 
                 value={shopSettings.name}
-                onChange={e => setShopSettings({...shopSettings, name: e.target.value})}
+                onChange={e => setShopSettings({...shopSettings, name: e.target.value.toUpperCase()})}
+                style={{ textTransform: 'uppercase' }}
                 required
               />
             </div>
@@ -248,8 +252,9 @@ const Settings = () => {
               type="text" 
               className="form-control" 
               value={shopSettings.address}
-              onChange={e => setShopSettings({...shopSettings, address: e.target.value})}
+              onChange={e => setShopSettings({...shopSettings, address: e.target.value.toUpperCase()})}
               placeholder="ex: Rue du Commerce, Abidjan"
+              style={{ textTransform: 'uppercase' }}
               required
             />
           </div>
@@ -322,8 +327,9 @@ const Settings = () => {
                 type="text" 
                 className="form-control" 
                 value={newEmployeeName}
-                onChange={e => setNewEmployeeName(e.target.value)}
-                placeholder="ex: Yao Kouadio Paul"
+                onChange={e => setNewEmployeeName(e.target.value.toUpperCase())}
+                placeholder="ex: YAO KOUADIO PAUL"
+                style={{ textTransform: 'uppercase' }}
                 required
               />
             </div>

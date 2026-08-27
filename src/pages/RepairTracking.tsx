@@ -138,9 +138,9 @@ const RepairTracking = () => {
               type="text" 
               className="form-control" 
               placeholder="Rechercher facture, client, encaisseur..." 
-              style={{ paddingLeft: '35px', marginBottom: 0, width: '220px' }}
+              style={{ paddingLeft: '35px', marginBottom: 0, width: '240px', textTransform: 'uppercase' }}
               value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
+              onChange={e => setSearchTerm(e.target.value.toUpperCase())}
             />
           </div>
           

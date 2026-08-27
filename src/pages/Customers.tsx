@@ -62,9 +62,9 @@ const Customers = () => {
           type="text" 
           placeholder="Rechercher un client (nom, tél 1, tél 2, tél 3)..." 
           className="form-control"
-          style={{ maxWidth: '360px', marginBottom: 0 }}
+          style={{ maxWidth: '360px', marginBottom: 0, textTransform: 'uppercase' }}
           value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
+          onChange={e => setSearchTerm(e.target.value.toUpperCase())}
         />
       </div>
 

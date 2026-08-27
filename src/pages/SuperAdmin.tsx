@@ -99,11 +99,12 @@ export const SuperAdmin = () => {
     setSuperTechError('');
     setSuperTechSuccess('');
 
+    const upperTechName = superTechName.trim().toUpperCase();
     const res = await createTechnicianWithAccount(
-      superTechName,
-      superTechEmail,
-      superTechPassword,
-      superTechPhone || undefined,
+      upperTechName,
+      superTechEmail.trim(),
+      superTechPassword.trim(),
+      superTechPhone.trim() || undefined,
       superTechRole,
       selectedShopId
     );
@@ -183,20 +184,22 @@ export const SuperAdmin = () => {
 
   useEffect(() => {
     fetchGlobalData();
-  }, []);
+  }, [allShops]);
 
   // Inspect a specific shop
-  const handleInspectShop = async (shopId: string) => {
+  const inspectShop = async (shopId: string) => {
     setSelectedShopId(shopId);
-    setActiveTab('inspector');
     setLoadingInspect(true);
+    const targetShop = (shops.length > 0 ? shops : allShops).find(s => s.id === shopId) || null;
+
+    if (!targetShop) {
+      setLoadingInspect(false);
+      return;
+    }
 
     try {
-      const targetShop = displayShops.find(s => s.id === shopId) || null;
-      if (!targetShop) return;
-
       const [invRes, custRes, empRes, modRes, issRes] = await Promise.all([
-        supabase.from('tb_invoices').select(`*, customer:tb_customers(*), device:tb_devices(*)`).eq('shop_id', shopId).order('date', { ascending: false }),
+        supabase.from('tb_invoices').select('*, customer:tb_customers(*), device:tb_devices(*)').eq('shop_id', shopId).order('date', { ascending: false }),
         supabase.from('tb_customers').select('*').eq('shop_id', shopId).order('created_at', { ascending: false }),
         supabase.from('tb_employees').select('*').eq('shop_id', shopId),
         supabase.from('tb_device_models').select('*').eq('shop_id', shopId),
@@ -235,10 +238,12 @@ export const SuperAdmin = () => {
     }
 
     try {
-      const finalSlug = slug.trim() || shopName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const upperShopName = shopName.trim().toUpperCase();
+      const upperManagerName = managerName.trim().toUpperCase();
+      const finalSlug = slug.trim().toLowerCase() || shopName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-');
       const result = await createShopWithManager(
-        shopName.trim(),
-        managerName.trim(),
+        upperShopName,
+        upperManagerName,
         managerEmail.trim(),
         managerPassword.trim(),
         finalSlug,
@@ -250,10 +255,10 @@ export const SuperAdmin = () => {
         const loginUrl = `${window.location.origin}/login`;
 
         setLastCreatedCredentials({
-          shopName: shopName.trim(),
+          shopName: upperShopName,
           slug: finalSlug,
           customDomain: customDomain.trim() || undefined,
-          managerName: managerName.trim(),
+          managerName: upperManagerName,
           managerEmail: managerEmail.trim(),
           managerPassword: managerPassword.trim(),
           portalUrl,
