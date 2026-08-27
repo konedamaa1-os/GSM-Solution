@@ -795,7 +795,7 @@ const CreateInvoice = () => {
       )}
 
       {/* 🚀 FORMULAIRE STEP BY STEP + APERÇU LIVE */}
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={handleSubmit} autoComplete="off" data-lpignore="true">
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))',
@@ -1233,47 +1233,32 @@ const CreateInvoice = () => {
                     <input 
                       type="text" 
                       name="deviceSerial" 
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-form-type="other"
                       className="form-control" 
                       placeholder="3568912..." 
                       value={formData.deviceSerial} 
                       onChange={handleChange} 
+                      style={{ textTransform: 'uppercase' }}
                     />
                   </div>
 
                   <div className="form-group" style={{ marginBottom: 0 }}>
                     <label className="form-label" style={{ fontSize: '0.85rem' }}>
-                      Code PIN / Schéma de déverrouillage
+                      Code PIN / Schéma de déverrouillage (Optionnel)
                     </label>
-                    <div style={{ position: 'relative' }}>
-                      <Lock size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                      <input 
-                        type={showPassword ? 'text' : 'password'} 
-                        name="devicePassword" 
-                        className="form-control" 
-                        placeholder="ex: 1234, Schéma..." 
-                        style={{ paddingLeft: '34px', paddingRight: '38px' }}
-                        value={formData.devicePassword} 
-                        onChange={handleChange} 
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        style={{
-                          position: 'absolute',
-                          right: '8px',
-                          top: '50%',
-                          transform: 'translateY(-50%)',
-                          background: 'none',
-                          border: 'none',
-                          color: '#94a3b8',
-                          cursor: 'pointer',
-                          padding: '4px'
-                        }}
-                        title={showPassword ? 'Masquer' : 'Afficher'}
-                      >
-                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                    <input 
+                      type="text" 
+                      name="devicePassword" 
+                      autoComplete="new-password"
+                      data-lpignore="true"
+                      data-form-type="other"
+                      className="form-control" 
+                      placeholder="ex: 1234, Schéma en L..." 
+                      value={formData.devicePassword} 
+                      onChange={handleChange} 
+                    />
                   </div>
                 </div>
 
