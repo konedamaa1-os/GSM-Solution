@@ -1075,20 +1075,20 @@ const CreateInvoice = () => {
                   </div>
                 </div>
 
-                {/* 📋 2. & 3. LISTES DÉROULANTES MARQUE ET MODÈLE */}
-                <div className="form-row" style={{ marginBottom: '1.5rem' }}>
+                {/* 📋 2. & 3. LISTES DÉROULANTES MARQUE ET MODÈLE (PARFAITEMENT ALIGNÉES) */}
+                <div className="form-row" style={{ marginBottom: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'start' }}>
                   {/* MARQUE */}
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                        Marque de l'appareil <span style={{ color: '#ef4444' }}>*</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '26px', marginBottom: '6px', gap: '8px' }}>
+                      <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0, whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
+                        Marque <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <button
                         type="button"
                         onClick={() => setCustomBrandMode(!customBrandMode)}
-                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', padding: 0 }}
                       >
-                        <Edit3 size={12} /> {customBrandMode ? 'Choisir dans la liste' : 'Saisie libre'}
+                        <Edit3 size={12} /> {customBrandMode ? 'Liste' : 'Saisie libre'}
                       </button>
                     </div>
 
@@ -1098,8 +1098,8 @@ const CreateInvoice = () => {
                         name="deviceBrand" 
                         required 
                         className="form-control" 
-                        placeholder="Tapez la marque (ex: Sony, Asus...)" 
-                        style={{ fontWeight: 600, height: '46px' }}
+                        placeholder="Tapez la marque (ex: SONY, ASUS...)" 
+                        style={{ fontWeight: 600, height: '46px', textTransform: 'uppercase' }}
                         value={formData.deviceBrand} 
                         onChange={handleChange} 
                         autoFocus
@@ -1124,16 +1124,16 @@ const CreateInvoice = () => {
 
                   {/* MODÈLE EXACT */}
                   <div className="form-group" style={{ marginBottom: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                      <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                        Modèle exact <span style={{ color: '#ef4444' }}>*</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '26px', marginBottom: '6px', gap: '8px' }}>
+                      <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0, whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
+                        Modèle <span style={{ color: '#ef4444' }}>*</span>
                       </label>
                       <button
                         type="button"
                         onClick={() => setCustomModelMode(!customModelMode)}
-                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', padding: 0 }}
                       >
-                        <Edit3 size={12} /> {customModelMode ? 'Choisir dans la liste' : 'Saisie libre'}
+                        <Edit3 size={12} /> {customModelMode ? 'Liste' : 'Saisie libre'}
                       </button>
                     </div>
 
@@ -1143,8 +1143,8 @@ const CreateInvoice = () => {
                         name="deviceModel" 
                         required 
                         className="form-control" 
-                        placeholder="Tapez le modèle (ex: iPhone 13, Spark 10...)" 
-                        style={{ fontWeight: 600, height: '46px' }}
+                        placeholder="Tapez le modèle (ex: IPHONE 13, SPARK 10...)" 
+                        style={{ fontWeight: 600, height: '46px', textTransform: 'uppercase' }}
                         value={formData.deviceModel} 
                         onChange={handleChange} 
                         autoFocus
@@ -1172,16 +1172,16 @@ const CreateInvoice = () => {
 
                 {/* 📋 4. LISTE DÉROULANTE PANNE & DIAGNOSTIC */}
                 <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                      Description de la Panne / Diagnostic <span style={{ color: '#ef4444' }}>*</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '26px', marginBottom: '6px', gap: '8px' }}>
+                    <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0, whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
+                      Panne & Diagnostic <span style={{ color: '#ef4444' }}>*</span>
                     </label>
                     <button
                       type="button"
                       onClick={() => setCustomIssueMode(!customIssueMode)}
-                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', padding: 0 }}
                     >
-                      <Edit3 size={12} /> {customIssueMode ? 'Choisir dans la liste' : 'Saisie libre'}
+                      <Edit3 size={12} /> {customIssueMode ? 'Liste' : 'Saisie libre'}
                     </button>
                   </div>
 
