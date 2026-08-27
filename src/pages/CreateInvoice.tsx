@@ -244,34 +244,36 @@ const CreateInvoice = () => {
     }
   }, [employees, activeEmployee]);
 
-  // Liste complète et unique des Marques pour le menu déroulant
+  // Liste complète et unique des Marques pour le menu déroulant (en majuscules)
   const allBrands = useMemo(() => {
-    const fromModels = deviceModels.map(m => m.brand);
-    const fromInvoices = invoices.map(i => i.device?.brand).filter(Boolean);
-    const set = new Set([...DEFAULT_BRANDS, ...fromModels, ...fromInvoices]);
+    const fromModels = deviceModels.map(m => (m.brand || '').trim().toUpperCase());
+    const fromInvoices = invoices.map(i => (i.device?.brand || '').trim().toUpperCase()).filter(Boolean);
+    const defaults = DEFAULT_BRANDS.map(b => b.trim().toUpperCase());
+    const set = new Set([...defaults, ...fromModels, ...fromInvoices].filter(Boolean));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [deviceModels, invoices]);
 
-  // Liste complète et unique des Modèles selon la marque sélectionnée pour le menu déroulant
+  // Liste complète et unique des Modèles selon la marque sélectionnée pour le menu déroulant (en majuscules)
   const allModelsForBrand = useMemo(() => {
     const brandLower = formData.deviceBrand.trim().toLowerCase();
-    const defaults = DEFAULT_MODELS_BY_BRAND[brandLower] || [];
+    const defaults = (DEFAULT_MODELS_BY_BRAND[brandLower] || []).map(m => m.trim().toUpperCase());
     const fromModels = deviceModels
-      .filter(m => !brandLower || m.brand.toLowerCase() === brandLower)
-      .map(m => m.model);
+      .filter(m => !brandLower || (m.brand || '').toLowerCase() === brandLower)
+      .map(m => (m.model || '').trim().toUpperCase());
     const fromInvoices = invoices
-      .filter(i => !brandLower || i.device?.brand?.toLowerCase() === brandLower)
-      .map(i => i.device?.model)
+      .filter(i => !brandLower || (i.device?.brand || '').toLowerCase() === brandLower)
+      .map(i => (i.device?.model || '').trim().toUpperCase())
       .filter(Boolean);
     
-    return Array.from(new Set([...defaults, ...fromModels, ...fromInvoices])).sort((a, b) => a.localeCompare(b));
+    return Array.from(new Set([...defaults, ...fromModels, ...fromInvoices].filter(Boolean))).sort((a, b) => a.localeCompare(b));
   }, [deviceModels, invoices, formData.deviceBrand]);
 
-  // Liste complète des Pannes pour le menu déroulant
+  // Liste complète des Pannes pour le menu déroulant (en majuscules)
   const allIssues = useMemo(() => {
-    const fromIssues = commonIssues.map(i => i.name);
-    const fromInvoices = invoices.map(i => i.device?.issue).filter(Boolean);
-    return Array.from(new Set([...DEFAULT_COMMON_ISSUES, ...fromIssues, ...fromInvoices])).sort((a, b) => a.localeCompare(b));
+    const fromIssues = commonIssues.map(i => (i.name || '').trim().toUpperCase());
+    const fromInvoices = invoices.map(i => (i.device?.issue || '').trim().toUpperCase()).filter(Boolean);
+    const defaults = DEFAULT_COMMON_ISSUES.map(i => i.trim().toUpperCase());
+    return Array.from(new Set([...defaults, ...fromIssues, ...fromInvoices].filter(Boolean))).sort((a, b) => a.localeCompare(b));
   }, [commonIssues, invoices]);
 
   // 1. GESTION LISTE DÉROULANTE CLIENT
