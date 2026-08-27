@@ -418,6 +418,8 @@ function App() {
               <Route path="/nouvelle-facture" element={<CreateInvoice />} />
               <Route path="/reparations" element={<RepairTracking />} />
               <Route path="/facture/:id" element={<InvoiceView />} />
+              <Route path="/recu/:id" element={<InvoiceView />} />
+              <Route path="/ticket/:id" element={<InvoiceView />} />
               <Route path="/clients" element={<Customers />} />
               <Route path="/catalogue" element={<Catalog />} />
               <Route path="/abonnement" element={
