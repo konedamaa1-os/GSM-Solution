@@ -7,7 +7,7 @@ import { getDomainInfo, type DomainInfo } from '../lib/domain';
 interface AppContextType extends AppState {
   domainShop: Shop | null;
   domainInfo: DomainInfo;
-  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>) => Promise<boolean>;
+  addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>) => Promise<string | null | boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
   updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus'], collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string }) => Promise<void>;
   addEmployee: (employee: Omit<Employee, 'id' | 'shop_id'>) => Promise<void>;
@@ -544,9 +544,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         paidAt: paidAt || undefined
       };
       setInvoices([newInvoice, ...invoices]);
-      return true;
+      return newInvData.id;
     }
-    return false;
+    return null;
   };
 
   const updateInvoiceStatus = async (id: string, status: Invoice['status']) => {

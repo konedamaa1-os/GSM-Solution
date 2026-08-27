@@ -247,8 +247,22 @@ const Dashboard = () => {
                       {invoice.paymentStatus}
                     </span>
                     {getStatusBadge(invoice.status)}
-                    <Link to={`/facture/${invoice.id}`} style={{ color: 'var(--primary-color)' }}>
-                      <ArrowRight size={18} />
+                    <Link 
+                      to={`/facture/${invoice.id}`} 
+                      className="btn btn-secondary" 
+                      style={{ 
+                        padding: '0.35rem 0.7rem', 
+                        fontSize: '0.75rem', 
+                        fontWeight: 700, 
+                        backgroundColor: '#eff6ff', 
+                        borderColor: '#bfdbfe', 
+                        color: '#1d4ed8',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      🧾 Petit Reçu
                     </Link>
                   </div>
                 </div>

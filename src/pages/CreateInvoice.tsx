@@ -580,10 +580,12 @@ const CreateInvoice = () => {
         notes: formData.notes.trim().toUpperCase()
       };
       
-      const success = await addInvoice(newInvoice as any);
+      const createdId = await addInvoice(newInvoice as any);
 
-      if (success) {
-        navigate('/');
+      if (createdId) {
+        navigate(`/facture/${createdId}`);
+      } else {
+        navigate('/reparations');
       }
     } catch (err: any) {
       alert('Erreur: ' + (err?.message || 'Une erreur est survenue'));

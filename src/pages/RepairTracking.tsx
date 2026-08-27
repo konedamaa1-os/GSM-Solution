@@ -356,8 +356,23 @@ const RepairTracking = () => {
                   {/* Actions */}
                   <td style={{ padding: '1rem 0.5rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Link to={`/facture/${invoice.id}`} className="btn btn-secondary" style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', fontWeight: 600 }}>
-                        Fiche ➔
+                      <Link 
+                        to={`/facture/${invoice.id}`} 
+                        className="btn btn-secondary" 
+                        style={{ 
+                          padding: '0.4rem 0.85rem', 
+                          fontSize: '0.78rem', 
+                          fontWeight: 700, 
+                          backgroundColor: '#eff6ff', 
+                          color: '#1d4ed8', 
+                          borderColor: '#bfdbfe',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        🧾 Petit Reçu ➔
                       </Link>
 
                       {/* Delete is STRICTLY reserved for manager */}
