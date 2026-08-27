@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
-import { Printer, ArrowLeft, Phone, Mail, MapPin, CheckCircle2, DollarSign, CreditCard, UserCheck, X as CloseIcon } from 'lucide-react';
+import { Printer, ArrowLeft, Phone, Mail, MapPin, CheckCircle2, DollarSign, CreditCard, UserCheck, X as CloseIcon, Receipt, FileText, Wrench, Smartphone, User, ShieldAlert } from 'lucide-react';
 
 const PAYMENT_METHODS = [
   'Espèces',
@@ -17,6 +17,9 @@ const InvoiceView = () => {
   const { id } = useParams<{ id: string }>();
   const { invoices, employees, updateInvoicePaymentStatus, deleteInvoice, settings, currentShop, activeEmployee, user, isManager } = useAppContext();
   const navigate = useNavigate();
+
+  // Mode d'affichage et d'impression : 'ticket' (Petit Reçu 80mm) ou 'a4' (Facture Standard A4)
+  const [viewMode, setViewMode] = useState<'ticket' | 'a4'>('ticket');
 
   const [showCashModal, setShowCashModal] = useState(false);
   const [selectedCollectorId, setSelectedCollectorId] = useState<string>('');
@@ -117,18 +120,122 @@ const InvoiceView = () => {
   const shopPhone2 = settings?.phone2;
   const shopPhone3 = settings?.phone3;
   const shopEmail = settings?.email || 'contact@gsmsolution.xyz';
-  const shopTerms = settings?.termsAndConditions || 'Garantie légale sur pièces et main d\'œuvre. Les appareils non réclamés après 60 jours pourront être recyclés.';
+  const shopTerms = settings?.termsAndConditions || 'Appareil non réclamé après 60 jours sera recyclé. Présentation obligatoire de ce ticket pour tout retrait.';
 
   const modWindow = getModificationWindow();
 
   return (
-    <div style={{ maxWidth: '820px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '840px', margin: '0 auto', paddingBottom: '3rem' }}>
+      
+      {/* 🖨️ CSS PRINT DÉDIÉ POUR LE PETIT REÇU THERMIQUE (80mm) ET LE FORMAT A4 */}
+      <style>{`
+        @media print {
+          body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          ${viewMode === 'ticket' ? `
+            @page {
+              size: 80mm auto;
+              margin: 0;
+            }
+            .ticket-container {
+              display: block !important;
+              width: 76mm !important;
+              max-width: 76mm !important;
+              margin: 0 auto !important;
+              padding: 4mm 2mm !important;
+              box-shadow: none !important;
+              border: none !important;
+              font-size: 11px !important;
+              color: #000000 !important;
+            }
+            .print-container-a4 {
+              display: none !important;
+            }
+          ` : `
+            @page {
+              size: A4 portrait;
+              margin: 10mm;
+            }
+            .ticket-container {
+              display: none !important;
+            }
+            .print-container-a4 {
+              display: block !important;
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              width: 100% !important;
+            }
+          `}
+        }
+      `}</style>
+
       {/* Top action buttons */}
-      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
         <button className="btn btn-secondary" onClick={() => navigate(-1)}>
           <ArrowLeft size={18} /> Retour
         </button>
         
+        {/* Sélecteur de format : Petit Reçu 80mm vs Grand Format A4 */}
+        <div style={{
+          display: 'inline-flex',
+          backgroundColor: '#e2e8f0',
+          padding: '4px',
+          borderRadius: '10px',
+          gap: '4px'
+        }}>
+          <button
+            type="button"
+            onClick={() => setViewMode('ticket')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: viewMode === 'ticket' ? '#2563eb' : 'transparent',
+              color: viewMode === 'ticket' ? '#ffffff' : '#475569',
+              boxShadow: viewMode === 'ticket' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Receipt size={16} /> 🧾 Petit Reçu (Ticket 80mm)
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewMode('a4')}
+            style={{
+              padding: '6px 14px',
+              borderRadius: '8px',
+              border: 'none',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: viewMode === 'a4' ? '#2563eb' : 'transparent',
+              color: viewMode === 'a4' ? '#ffffff' : '#475569',
+              boxShadow: viewMode === 'a4' ? '0 2px 6px rgba(37,99,235,0.3)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            <FileText size={16} /> 📄 Facture A4
+          </button>
+        </div>
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {isPaid ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -188,187 +295,350 @@ const InvoiceView = () => {
               onClick={handleDeleteInvoice}
               style={{ color: '#dc2626', backgroundColor: '#fee2e2', borderColor: '#fecaca', fontSize: '0.8rem', padding: '6px 12px', fontWeight: 600 }}
             >
-              🗑️ Supprimer Facture
+              🗑️ Supprimer
             </button>
           )}
 
-          <button className="btn btn-primary" onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Printer size={18} /> Imprimer Reçu
+          <button 
+            className="btn btn-primary" 
+            onClick={handlePrint} 
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#1e293b', border: 'none', fontWeight: 700 }}
+          >
+            <Printer size={18} /> {viewMode === 'ticket' ? 'Imprimer Petit Reçu' : 'Imprimer Facture A4'}
           </button>
         </div>
       </div>
 
-      <div className="card print-container" style={{ padding: '3rem', backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--border-color)', paddingBottom: '2rem', marginBottom: '2rem' }}>
-          <div>
-            <h1 style={{ color: 'var(--primary-color)', fontSize: '2rem', margin: '0 0 0.5rem 0', fontWeight: 800 }}>
+      {/* ========================================================================= */}
+      {/* 🧾 FORMAT 1 : PETIT REÇU THERMIQUE (80mm / TICKET DE CAISSE)            */}
+      {/* ========================================================================= */}
+      {viewMode === 'ticket' && (
+        <div 
+          className="ticket-container" 
+          style={{
+            maxWidth: '360px',
+            margin: '0 auto',
+            backgroundColor: '#ffffff',
+            padding: '1.5rem 1.25rem',
+            borderRadius: '14px',
+            border: '2px dashed #cbd5e1',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.07)',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace, sans-serif',
+            color: '#0f172a',
+            lineHeight: 1.35
+          }}
+        >
+          {/* En-tête Boutique */}
+          <div style={{ textAlign: 'center', paddingBottom: '10px' }}>
+            <div style={{ fontSize: '1.3rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#0f172a' }}>
               {shopName}
-            </h1>
-            <p style={{ color: 'var(--text-secondary)', margin: '0 0 4px 0', fontSize: '0.9rem' }}>
-              Service de Réparation & Maintenance Téléphonie
-            </p>
-            <p style={{ color: 'var(--text-secondary)', margin: '0 0 4px 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <MapPin size={14} /> {shopAddress}
-            </p>
-            <div style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              <span>📞 {shopPhone1}</span>
-              {shopPhone2 && <span>• 💬 {shopPhone2}</span>}
-              {shopPhone3 && <span>• 🚨 {shopPhone3}</span>}
             </div>
-            {shopEmail && (
-              <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '0.85rem' }}>
-                ✉️ {shopEmail}
-              </p>
+            <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '2px', fontWeight: 600 }}>
+              Atelier Réparation & Maintenance GSM
+            </div>
+            <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+              📍 {shopAddress}
+            </div>
+            <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#1e293b', marginTop: '3px' }}>
+              📞 {shopPhone1} {shopPhone2 && `• ${shopPhone2}`}
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px dashed #94a3b8', margin: '8px 0' }} />
+
+          {/* Numéro & Date */}
+          <div style={{ textAlign: 'center', padding: '4px 0' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              REÇU DE PRISE EN CHARGE
+            </div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#2563eb', margin: '2px 0' }}>
+              N° {invoice.invoiceNumber}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+              📅 {new Date(invoice.date).toLocaleDateString('fr-FR')} à {new Date(invoice.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px dashed #94a3b8', margin: '8px 0' }} />
+
+          {/* Informations Client */}
+          <div style={{ fontSize: '0.82rem', padding: '2px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+              <span style={{ color: '#64748b', fontWeight: 600 }}>CLIENT :</span>
+              <span style={{ fontWeight: 800, textTransform: 'uppercase', textAlign: 'right' }}>{invoice.customer.name}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b', fontWeight: 600 }}>CONTACT :</span>
+              <span style={{ fontWeight: 700 }}>{invoice.customer.phone} {invoice.customer.phone2 && `| ${invoice.customer.phone2}`}</span>
+            </div>
+          </div>
+
+          <div style={{ borderTop: '1px dashed #94a3b8', margin: '8px 0' }} />
+
+          {/* Détails Appareil & Panne */}
+          <div style={{ fontSize: '0.82rem', padding: '2px 0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ color: '#64748b', fontWeight: 600 }}>APPAREIL :</span>
+              <span style={{ fontWeight: 800, textTransform: 'uppercase', textAlign: 'right' }}>{invoice.device.brand} {invoice.device.model}</span>
+            </div>
+            <div style={{ marginBottom: '4px' }}>
+              <span style={{ color: '#64748b', fontWeight: 600 }}>PANNE DÉCLARÉE :</span>
+              <div style={{ fontWeight: 700, backgroundColor: '#f8fafc', padding: '4px 6px', borderRadius: '4px', marginTop: '2px', border: '1px solid #f1f5f9' }}>
+                🛠️ {invoice.device.issue}
+              </div>
+            </div>
+            {invoice.device.accessories && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem' }}>
+                <span style={{ color: '#64748b' }}>Accessoires :</span>
+                <span style={{ fontWeight: 600 }}>{invoice.device.accessories}</span>
+              </div>
             )}
           </div>
-          <div style={{ textAlign: 'right' }}>
-            <h2 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 800 }}>
-              FACTURE / REÇU D'ATELIER
-            </h2>
-            <div style={{ fontWeight: 'bold', fontSize: '1.15rem', color: 'var(--primary-color)' }}>N° {invoice.invoiceNumber}</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
-              Date dépôt : {new Date(invoice.date).toLocaleDateString('fr-FR')}
+
+          <div style={{ borderTop: '1px dashed #94a3b8', margin: '8px 0' }} />
+
+          {/* Montant & Règlement */}
+          <div style={{ textAlign: 'center', padding: '6px 0', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', margin: '6px 0' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
+              MONTANT TOTAL À RÉGLER
+            </div>
+            <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#0f172a', margin: '2px 0' }}>
+              {invoice.price.toLocaleString('fr-FR')} <span style={{ fontSize: '0.9rem' }}>FCFA</span>
+            </div>
+            
+            <div style={{ marginTop: '4px' }}>
+              {isPaid ? (
+                <span style={{
+                  display: 'inline-block',
+                  backgroundColor: '#dcfce7',
+                  color: '#15803d',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 800,
+                  fontSize: '0.8rem'
+                }}>
+                  ✅ PAYÉ & ENCAISSÉ ({invoice.paymentMethod || 'Espèces'})
+                </span>
+              ) : (
+                <span style={{
+                  display: 'inline-block',
+                  backgroundColor: '#fff7ed',
+                  color: '#c2410c',
+                  padding: '3px 10px',
+                  borderRadius: '6px',
+                  fontWeight: 800,
+                  fontSize: '0.8rem'
+                }}>
+                  ⏳ IMPAYÉ (À régler au retrait)
+                </span>
+              )}
             </div>
 
-            {/* Official Payment Status Stamp */}
-            <div style={{ marginTop: '10px' }}>
-              {isPaid ? (
-                <div style={{
-                  display: 'inline-block',
-                  border: '2px solid #16a34a',
-                  color: '#15803d',
-                  backgroundColor: '#f0fdf4',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  textAlign: 'center',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.5px'
-                }}>
-                  ✓ REÇU RÉGLÉ & PAYÉ
-                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#166534', marginTop: '2px', textTransform: 'none' }}>
-                    Encaissé par : <strong>{invoice.paymentCollectorName || 'Collaborateur'}</strong> ({invoice.paymentMethod || 'Espèces'})
+            {isPaid && invoice.paymentCollectorName && (
+              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '3px' }}>
+                Encaissé par : <strong>{invoice.paymentCollectorName}</strong>
+              </div>
+            )}
+          </div>
+
+          <div style={{ borderTop: '1px dashed #94a3b8', margin: '8px 0' }} />
+
+          {/* Intervenant & Conditions */}
+          <div style={{ textAlign: 'center', fontSize: '0.75rem', color: '#475569' }}>
+            <div style={{ marginBottom: '4px' }}>
+              Technicien responsable : <strong>{techEmployee?.name || 'Atelier'}</strong>
+            </div>
+            <div style={{ fontStyle: 'italic', fontSize: '0.7rem', color: '#64748b', marginTop: '6px' }}>
+              * Présentation de ce reçu obligatoire pour le retrait de l'appareil. *
+            </div>
+            <div style={{ fontWeight: 700, color: '#0f172a', marginTop: '4px', fontSize: '0.78rem' }}>
+              Merci pour votre confiance !
+            </div>
+
+            {/* Simulated Barcode */}
+            <div style={{ marginTop: '8px', letterSpacing: '4px', fontSize: '0.9rem', color: '#94a3b8', fontWeight: 900 }}>
+              ||||| | || |||| | ||||| | |||
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 📄 FORMAT 2 : FACTURE COMPLÈTE STANDARD (A4)                              */}
+      {/* ========================================================================= */}
+      {viewMode === 'a4' && (
+        <div className="card print-container-a4" style={{ padding: '3rem', backgroundColor: '#fff', borderRadius: '16px', boxShadow: '0 4px 20px rgba(0,0,0,0.06)' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '2px solid var(--border-color)', paddingBottom: '2rem', marginBottom: '2rem' }}>
+            <div>
+              <h1 style={{ color: 'var(--primary-color)', fontSize: '2rem', margin: '0 0 0.5rem 0', fontWeight: 800 }}>
+                {shopName}
+              </h1>
+              <p style={{ color: 'var(--text-secondary)', margin: '0 0 4px 0', fontSize: '0.9rem' }}>
+                Service de Réparation & Maintenance Téléphonie
+              </p>
+              <p style={{ color: 'var(--text-secondary)', margin: '0 0 4px 0', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <MapPin size={14} /> {shopAddress}
+              </p>
+              <div style={{ color: 'var(--text-secondary)', margin: 0, fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                <span>📞 {shopPhone1}</span>
+                {shopPhone2 && <span>• 💬 {shopPhone2}</span>}
+                {shopPhone3 && <span>• 🚨 {shopPhone3}</span>}
+              </div>
+              {shopEmail && (
+                <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '0.85rem' }}>
+                  ✉️ {shopEmail}
+                </p>
+              )}
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <h2 style={{ fontSize: '1.4rem', color: 'var(--text-primary)', margin: '0 0 0.5rem 0', fontWeight: 800 }}>
+                FACTURE / REÇU D'ATELIER
+              </h2>
+              <div style={{ fontWeight: 'bold', fontSize: '1.15rem', color: 'var(--primary-color)' }}>N° {invoice.invoiceNumber}</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '4px' }}>
+                Date dépôt : {new Date(invoice.date).toLocaleDateString('fr-FR')}
+              </div>
+
+              {/* Official Payment Status Stamp */}
+              <div style={{ marginTop: '10px' }}>
+                {isPaid ? (
+                  <div style={{
+                    display: 'inline-block',
+                    border: '2px solid #16a34a',
+                    color: '#15803d',
+                    backgroundColor: '#f0fdf4',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px'
+                  }}>
+                    ✓ REÇU RÉGLÉ & PAYÉ
+                    <div style={{ fontSize: '0.72rem', fontWeight: 600, color: '#166534', marginTop: '2px', textTransform: 'none' }}>
+                      Encaissé par : <strong>{invoice.paymentCollectorName || 'Collaborateur'}</strong> ({invoice.paymentMethod || 'Espèces'})
+                    </div>
                   </div>
+                ) : (
+                  <div style={{
+                    display: 'inline-block',
+                    border: '2px solid #ea580c',
+                    color: '#c2410c',
+                    backgroundColor: '#fff7ed',
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    fontWeight: 800,
+                    fontSize: '0.85rem',
+                    textAlign: 'center',
+                    textTransform: 'uppercase'
+                  }}>
+                    ⏳ EN ATTENTE DE RÈGLEMENT
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Info with 3 Contact Numbers */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', fontWeight: 700 }}>
+              Informations Client & Contacts
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
+              <div>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Nom du client :</span>
+                <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>{invoice.customer.name}</div>
+              </div>
+
+              <div>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Contact Principal :</span>
+                <div style={{ fontWeight: 600, color: '#1d4ed8' }}>📱 {invoice.customer.phone}</div>
+              </div>
+
+              {invoice.customer.phone2 && (
+                <div>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Contact 2 (WhatsApp) :</span>
+                  <div style={{ fontWeight: 600, color: '#047857' }}>💬 {invoice.customer.phone2}</div>
                 </div>
-              ) : (
-                <div style={{
-                  display: 'inline-block',
-                  border: '2px solid #ea580c',
-                  color: '#c2410c',
-                  backgroundColor: '#fff7ed',
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  fontWeight: 800,
-                  fontSize: '0.85rem',
-                  textAlign: 'center',
-                  textTransform: 'uppercase'
-                }}>
-                  ⏳ EN ATTENTE DE RÈGLEMENT
+              )}
+
+              {invoice.customer.phone3 && (
+                <div>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Contact 3 (Urgence) :</span>
+                  <div style={{ fontWeight: 600, color: '#b45309' }}>🚨 {invoice.customer.phone3}</div>
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Customer Info with 3 Contact Numbers */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', fontWeight: 700 }}>
-            Informations Client & Contacts
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', backgroundColor: '#f8fafc', padding: '1rem', borderRadius: '8px' }}>
-            <div>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Nom du client :</span>
-              <div style={{ fontWeight: 700, fontSize: '1rem', color: '#0f172a' }}>{invoice.customer.name}</div>
-            </div>
-
-            <div>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Contact Principal :</span>
-              <div style={{ fontWeight: 600, color: '#1d4ed8' }}>📱 {invoice.customer.phone}</div>
-            </div>
-
-            {invoice.customer.phone2 && (
-              <div>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Contact 2 (WhatsApp) :</span>
-                <div style={{ fontWeight: 600, color: '#047857' }}>💬 {invoice.customer.phone2}</div>
+          {/* Device Info */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', fontWeight: 700 }}>
+              Détails de l'Appareil
+            </h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <div><span style={{ color: 'var(--text-secondary)' }}>Marque & Modèle :</span> <b>{invoice.device.brand} {invoice.device.model}</b></div>
+              <div><span style={{ color: 'var(--text-secondary)' }}>Accessoires laissés :</span> {invoice.device.accessories || 'Aucun'}</div>
+              <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Panne déclarée :</span>
+                <p style={{ margin: '0.25rem 0', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', fontWeight: 500 }}>
+                  {invoice.device.issue}
+                </p>
               </div>
-            )}
+            </div>
+          </div>
 
-            {invoice.customer.phone3 && (
-              <div>
-                <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Contact 3 (Urgence) :</span>
-                <div style={{ fontWeight: 600, color: '#b45309' }}>🚨 {invoice.customer.phone3}</div>
+          {/* Financial Info */}
+          <div style={{ marginBottom: '2rem', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
+                <tr>
+                  <th style={{ padding: '1rem', textAlign: 'left' }}>Description des prestations</th>
+                  <th style={{ padding: '1rem', textAlign: 'right' }}>Montant</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ padding: '1rem' }}>
+                    <strong>Réparation technique & Main d'œuvre</strong><br />
+                    <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Appareil : {invoice.device.brand} {invoice.device.model} ({invoice.device.issue})</span>
+                  </td>
+                  <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary-color)' }}>
+                    {invoice.price.toLocaleString()} FCFA
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer Signatures with Encaisseur Identification */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '3rem', paddingTop: '1rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
+                <strong>Signature du Client</strong>
               </div>
-            )}
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
+                Technicien Référent :<br />
+                <strong>{techEmployee?.name || 'Technicien'}</strong>
+              </div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
+                Encaissé par :<br />
+                <strong>{invoice.paymentCollectorName || (isPaid ? 'Caisse / Atelier' : '—')}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
+            {shopTerms}
           </div>
         </div>
 
-        {/* Device Info */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h3 style={{ fontSize: '1.1rem', marginBottom: '0.75rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', fontWeight: 700 }}>
-            Détails de l'Appareil
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <div><span style={{ color: 'var(--text-secondary)' }}>Marque & Modèle :</span> <b>{invoice.device.brand} {invoice.device.model}</b></div>
-            <div><span style={{ color: 'var(--text-secondary)' }}>Accessoires laissés :</span> {invoice.device.accessories || 'Aucun'}</div>
-            <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Panne déclarée :</span>
-              <p style={{ margin: '0.25rem 0', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', fontWeight: 500 }}>
-                {invoice.device.issue}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Financial Info */}
-        <div style={{ marginBottom: '2rem', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid var(--border-color)' }}>
-              <tr>
-                <th style={{ padding: '1rem', textAlign: 'left' }}>Description des prestations</th>
-                <th style={{ padding: '1rem', textAlign: 'right' }}>Montant</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td style={{ padding: '1rem' }}>
-                  <strong>Réparation technique & Main d'œuvre</strong><br />
-                  <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Appareil : {invoice.device.brand} {invoice.device.model} ({invoice.device.issue})</span>
-                </td>
-                <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary-color)' }}>
-                  {invoice.price.toLocaleString()} FCFA
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer Signatures with Encaisseur Identification */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '3rem', paddingTop: '1rem' }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
-              <strong>Signature du Client</strong>
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
-              Technicien Référent :<br />
-              <strong>{techEmployee?.name || 'Technicien'}</strong>
-            </div>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
-              Encaissé par :<br />
-              <strong>{invoice.paymentCollectorName || (isPaid ? 'Caisse / Atelier' : '—')}</strong>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ marginTop: '2.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)', borderTop: '1px dashed #e2e8f0', paddingTop: '1rem' }}>
-          {shopTerms}
-        </div>
-      </div>
 
       {/* MODAL ENCAISSEMENT & TRACABILITE ENCAISSEUR */}
       {showCashModal && (
