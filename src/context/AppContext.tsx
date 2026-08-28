@@ -453,8 +453,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const hasAdvance = isPartial && (Number(invoiceData.advancePayment) > 0);
     const advanceAmount = isPaid ? invoiceData.price : (hasAdvance ? Number(invoiceData.advancePayment) : 0);
 
-    const paymentCollectorId = (isPaid || hasAdvance) ? (invoiceData.paymentCollectorId || activeEmployee?.id || null) : null;
-    const paymentCollectorName = (isPaid || hasAdvance) ? (invoiceData.paymentCollectorName || activeEmployee?.name || user?.email?.split('@')[0] || 'Technicien / Caisse') : null;
+    // Strict Anti-Fraud Rule: Technicians CANNOT collect in place of someone else
+    let paymentCollectorId: string | null = null;
+    let paymentCollectorName: string | null = null;
+
+    if (isPaid || hasAdvance) {
+      if (isManager) {
+        paymentCollectorId = invoiceData.paymentCollectorId || activeEmployee?.id || null;
+        paymentCollectorName = invoiceData.paymentCollectorName || activeEmployee?.name || user?.email?.split('@')[0] || 'Gérant / Direction';
+      } else {
+        paymentCollectorId = activeEmployee?.id || null;
+        paymentCollectorName = activeEmployee?.name || user?.email?.split('@')[0] || 'Technicien';
+      }
+    }
+
     const paymentMethod = (isPaid || hasAdvance) ? (invoiceData.paymentMethod || 'Espèces') : null;
     const paidAt = (isPaid || hasAdvance) ? (invoiceData.paidAt || new Date().toISOString()) : null;
 
@@ -595,8 +607,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!defaultCollectorName) defaultCollectorName = 'Technicien / Caisse';
 
-    const collectorId = collectorInfo?.collectorId || activeEmployee?.id || null;
-    const collectorName = collectorInfo?.collectorName || defaultCollectorName;
+    // Strict Anti-Fraud Rule: Technicians CANNOT collect in place of someone else
+    let collectorId: string | null = null;
+    let collectorName: string = defaultCollectorName;
+
+    if (isManager) {
+      collectorId = collectorInfo?.collectorId || activeEmployee?.id || null;
+      collectorName = collectorInfo?.collectorName || defaultCollectorName;
+    } else {
+      collectorId = activeEmployee?.id || null;
+      collectorName = activeEmployee?.name || defaultCollectorName;
+    }
+
     const paymentMethod = collectorInfo?.paymentMethod || 'Espèces';
     const nowIso = new Date().toISOString();
 

@@ -162,7 +162,7 @@ interface RegularCustomerProfile {
 }
 
 const CreateInvoice = () => {
-  const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee, settings, currentShop } = useAppContext();
+  const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee, isManager, settings, currentShop } = useAppContext();
   const navigate = useNavigate();
 
   // Active step (1, 2, or 3)
@@ -1740,21 +1740,56 @@ const CreateInvoice = () => {
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
                           {formData.paymentStatus === 'Partiel' ? "Encaisseur de l'avance" : "Encaisseur (Qui perçoit l'argent ?)"} <span style={{ color: '#ef4444' }}>*</span>
                         </label>
-                        <select
-                          name="paymentCollectorId"
-                          value={formData.paymentCollectorId}
-                          onChange={handleChange}
-                          className="form-control"
-                          style={{ padding: '8px 10px', fontSize: '0.85rem', fontWeight: 600 }}
-                        >
-                          {employees.map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.name} ({emp.role}) {activeEmployee?.id === emp.id ? '⭐ (Vous)' : ''}
-                            </option>
-                          ))}
-                        </select>
-                        <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                          💡 Technicien, Caissier ou Gérant.
+                        
+                        {!isManager ? (
+                          <div style={{
+                            padding: '8px 12px',
+                            backgroundColor: '#f1f5f9',
+                            border: '1.5px solid #cbd5e1',
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.88rem' }}>
+                                👤 {activeEmployee?.name || 'Vous-même'}
+                              </div>
+                              <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                                {activeEmployee?.role || 'Technicien'} (Votre compte connecté)
+                              </div>
+                            </div>
+                            <span style={{
+                              fontSize: '0.7rem',
+                              backgroundColor: '#e2e8f0',
+                              color: '#475569',
+                              padding: '2px 6px',
+                              borderRadius: '4px',
+                              fontWeight: 700
+                            }}>
+                              🔒 Verrouillé
+                            </span>
+                          </div>
+                        ) : (
+                          <select
+                            name="paymentCollectorId"
+                            value={formData.paymentCollectorId}
+                            onChange={handleChange}
+                            className="form-control"
+                            style={{ padding: '8px 10px', fontSize: '0.85rem', fontWeight: 600 }}
+                          >
+                            {employees.map(emp => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.name} ({emp.role}) {activeEmployee?.id === emp.id ? '⭐ (Vous)' : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        
+                        <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block', marginTop: '4px' }}>
+                          {!isManager 
+                            ? "🔒 Sécurité : En tant que collaborateur, l'encaissement est obligatoirement lié à votre propre nom."
+                            : "💡 En tant que Gérant, vous pouvez attribuer l'encaissement à un collaborateur spécifique."}
                         </span>
                       </div>
 

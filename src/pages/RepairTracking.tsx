@@ -627,20 +627,55 @@ const RepairTracking = () => {
                   <UserCheck size={16} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px', color: '#2563eb' }} />
                   Encaisseur (Qui perçoit l'argent ?) <span style={{ color: '#ef4444' }}>*</span>
                 </label>
-                <select
-                  className="form-control"
-                  value={selectedCollectorId}
-                  onChange={e => setSelectedCollectorId(e.target.value)}
-                  style={{ fontWeight: 600, padding: '10px 12px', borderRadius: '10px' }}
-                >
-                  {employees.map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.role}) {activeEmployee?.id === emp.id ? '⭐ (Vous)' : ''}
-                    </option>
-                  ))}
-                </select>
+
+                {!isManager ? (
+                  <div style={{
+                    padding: '10px 14px',
+                    backgroundColor: '#f1f5f9',
+                    border: '1.5px solid #cbd5e1',
+                    borderRadius: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>
+                        👤 {activeEmployee?.name || 'Vous-même'}
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                        {activeEmployee?.role || 'Technicien'} (Votre compte connecté)
+                      </div>
+                    </div>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      backgroundColor: '#e2e8f0',
+                      color: '#475569',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      fontWeight: 700
+                    }}>
+                      🔒 Verrouillé
+                    </span>
+                  </div>
+                ) : (
+                  <select
+                    className="form-control"
+                    value={selectedCollectorId}
+                    onChange={e => setSelectedCollectorId(e.target.value)}
+                    style={{ fontWeight: 600, padding: '10px 12px', borderRadius: '10px' }}
+                  >
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.name} ({emp.role}) {activeEmployee?.id === emp.id ? '⭐ (Vous)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                )}
+
                 <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#64748b' }}>
-                  💡 Le technicien ou le réceptionniste présent peut encaisser. L'encaisseur sera identifié nominativement sur le reçu.
+                  {!isManager 
+                    ? "🔒 Sécurité : Vous encaissez à votre propre nom. Les techniciens ne peuvent pas encaisser au nom d'un autre."
+                    : "💡 En tant que Gérant, vous pouvez désigner qui a reçu le paiement."}
                 </p>
               </div>
 
