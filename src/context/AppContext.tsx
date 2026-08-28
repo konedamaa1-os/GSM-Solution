@@ -146,29 +146,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (invoicesData) {
       const formattedInvoices: Invoice[] = invoicesData
         .filter(inv => inv.customer && inv.device)
-        .map(inv => ({
-        id: inv.id,
-        shop_id: inv.shop_id,
-        invoiceNumber: inv.invoice_number,
-        date: inv.date,
-        customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
-        employeeId: inv.employee_id,
-        device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
-        price: inv.price,
-        advancePayment: Number(inv.advance_payment) || 0,
-        warrantyMonths: inv.warranty_months,
-        status: inv.status as RepairStatus,
-        paymentStatus: (inv.payment_status || 'Impayé') as PaymentStatus,
-        paymentCollectorId: inv.payment_collector_id || undefined,
-        paymentCollectorName: inv.payment_collector_name || undefined,
-        paymentMethod: inv.payment_method || undefined,
-        paidAt: inv.paid_at || undefined,
-        balancePaymentCollectorId: inv.balance_payment_collector_id || undefined,
-        balancePaymentCollectorName: inv.balance_payment_collector_name || undefined,
-        balancePaymentMethod: inv.balance_payment_method || undefined,
-        balancePaidAt: inv.balance_paid_at || undefined,
-        notes: inv.notes
-      }));
+        .map(inv => {
+          const rawDev = Array.isArray(inv.device) ? inv.device[0] : inv.device;
+          const issueStr = rawDev?.issue || '';
+          let parsedIssues: string[] = [];
+          if (issueStr.includes(' • ')) {
+            parsedIssues = issueStr.split(' • ').map((s: string) => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+          } else if (issueStr) {
+            parsedIssues = [issueStr];
+          }
+
+          return {
+            id: inv.id,
+            shop_id: inv.shop_id,
+            invoiceNumber: inv.invoice_number,
+            date: inv.date,
+            customer: Array.isArray(inv.customer) ? inv.customer[0] : inv.customer,
+            employeeId: inv.employee_id,
+            device: {
+              ...rawDev,
+              issues: (rawDev?.issues && rawDev.issues.length > 0) ? rawDev.issues : parsedIssues
+            },
+            price: inv.price,
+            advancePayment: Number(inv.advance_payment) || 0,
+            warrantyMonths: inv.warranty_months,
+            status: inv.status as RepairStatus,
+            paymentStatus: inv.payment_status as PaymentStatus,
+            paymentCollectorId: inv.payment_collector_id || undefined,
+            paymentCollectorName: inv.payment_collector_name || undefined,
+            paymentMethod: inv.payment_method || undefined,
+            paidAt: inv.paid_at || undefined,
+            balancePaymentCollectorId: inv.balance_payment_collector_id || undefined,
+            balancePaymentCollectorName: inv.balance_payment_collector_name || undefined,
+            balancePaymentMethod: inv.balance_payment_method || undefined,
+            balancePaidAt: inv.balance_paid_at || undefined,
+            notes: inv.notes
+          };
+        });
       setInvoices(formattedInvoices);
     }
   };
@@ -532,24 +546,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // Auto-learn Panne / Issue if new
-      if (invoiceData.device.issue) {
-        const issueClean = invoiceData.device.issue.trim();
-        const existsIssue = commonIssues.some(
-          i => i.name.toLowerCase() === issueClean.toLowerCase()
-        );
-        if (!existsIssue) {
-          supabase.from('tb_common_issues').insert({
-            shop_id: currentShop.id,
-            name: issueClean,
-            default_price: invoiceData.price || 0
-          }).select().single().then(({ data: newIssue }) => {
-            if (newIssue) {
-              setCommonIssues(prev => [...prev, newIssue].sort((a, b) => a.name.localeCompare(b.name)));
-            }
-          });
+      // Auto-learn Panne(s) / Issues if new
+      const issuesToLearn: string[] = (invoiceData.device.issues && invoiceData.device.issues.length > 0)
+        ? invoiceData.device.issues
+        : (invoiceData.device.issue ? invoiceData.device.issue.split(' • ').map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean) : []);
+
+      issuesToLearn.forEach(singleIssue => {
+        if (singleIssue && singleIssue.trim()) {
+          const issueClean = singleIssue.trim();
+          const existsIssue = commonIssues.some(
+            i => i.name.toLowerCase() === issueClean.toLowerCase()
+          );
+          if (!existsIssue) {
+            supabase.from('tb_common_issues').insert({
+              shop_id: currentShop.id,
+              name: issueClean,
+              default_price: 0
+            }).select().single().then(({ data: newIssue }) => {
+              if (newIssue) {
+                setCommonIssues(prev => [...prev, newIssue].sort((a, b) => a.name.localeCompare(b.name)));
+              }
+            });
+          }
         }
-      }
+      });
 
       // Update local state
       const newInvoice: Invoice = {
@@ -560,7 +580,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         date,
         advancePayment: advanceAmount,
         customer: { ...finalCustomer, shop_id: currentShop.id },
-        device: deviceData || { ...invoiceData.device, shop_id: currentShop.id },
+        device: {
+          ...(deviceData || invoiceData.device),
+          shop_id: currentShop.id,
+          issues: invoiceData.device.issues || issuesToLearn
+        },
         paymentCollectorId: paymentCollectorId || undefined,
         paymentCollectorName: paymentCollectorName || undefined,
         paymentMethod: paymentMethod || undefined,

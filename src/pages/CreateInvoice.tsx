@@ -21,7 +21,9 @@ import {
   ChevronRight,
   Search,
   List,
-  Edit3
+  Edit3,
+  Plus,
+  Trash2
 } from 'lucide-react';
 
 const DEFAULT_BRANDS = [
@@ -161,6 +163,13 @@ interface RegularCustomerProfile {
   };
 }
 
+export interface PanneSlot {
+  id: string;
+  issue: string;
+  isCustom: boolean;
+  price?: number;
+}
+
 const CreateInvoice = () => {
   const { invoices, addInvoice, employees, deviceModels, commonIssues, activeEmployee, isManager, settings, currentShop } = useAppContext();
   const navigate = useNavigate();
@@ -177,6 +186,14 @@ const CreateInvoice = () => {
   const [customBrandMode, setCustomBrandMode] = useState<boolean>(false);
   const [customModelMode, setCustomModelMode] = useState<boolean>(false);
   const [customIssueMode, setCustomIssueMode] = useState<boolean>(false);
+
+  // Saisie directe de 4 pannes possibles sur 1 téléphone
+  const [pannes, setPannes] = useState<PanneSlot[]>([
+    { id: 'panne-1', issue: '', isCustom: false, price: 0 },
+    { id: 'panne-2', issue: '', isCustom: false, price: 0 },
+    { id: 'panne-3', issue: '', isCustom: false, price: 0 },
+    { id: 'panne-4', issue: '', isCustom: false, price: 0 }
+  ]);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -392,24 +409,98 @@ const CreateInvoice = () => {
     setFormData(prev => ({ ...prev, deviceModel: val.toUpperCase() }));
   };
 
-  // 4. GESTION LISTE DÉROULANTE PANNE
-  const handleSelectIssueDropdown = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
-    setValidationError('');
+  // 4. GESTION DES PANNES MULTIPLES (JUSQU'À 4 PANNES PAR APPAREIL)
+  const syncPannes = (slots: PanneSlot[]) => {
+    const validIssues = slots.map(p => p.issue.trim()).filter(Boolean);
+    const combined = validIssues.length > 1
+      ? validIssues.map((iss, idx) => `${idx + 1}. ${iss}`).join(' • ')
+      : (validIssues[0] || '');
 
+    const sumPrice = slots.reduce((acc, p) => acc + (p.price || 0), 0);
+
+    setFormData(prev => ({
+      ...prev,
+      deviceIssue: combined,
+      price: sumPrice > 0 ? sumPrice.toString() : prev.price
+    }));
+  };
+
+  const handleSelectPanneDropdown = (id: string, val: string) => {
+    setValidationError('');
     if (val === 'custom') {
-      setCustomIssueMode(true);
-      setFormData(prev => ({ ...prev, deviceIssue: '' }));
+      setPannes(prev => {
+        const next = prev.map(p => p.id === id ? { ...p, isCustom: true, issue: '', price: 0 } : p);
+        syncPannes(next);
+        return next;
+      });
       return;
     }
 
-    setCustomIssueMode(false);
+    if (val === '') {
+      setPannes(prev => {
+        const next = prev.map(p => p.id === id ? { ...p, isCustom: false, issue: '', price: 0 } : p);
+        syncPannes(next);
+        return next;
+      });
+      return;
+    }
+
     const commonIssueObj = commonIssues.find(i => i.name.toLowerCase() === val.toLowerCase());
-    setFormData(prev => ({
-      ...prev,
-      deviceIssue: val.toUpperCase(),
-      price: commonIssueObj?.default_price ? commonIssueObj.default_price.toString() : prev.price
-    }));
+    const unitPrice = commonIssueObj?.default_price || 0;
+
+    setPannes(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, isCustom: false, issue: val.toUpperCase(), price: unitPrice } : p);
+      syncPannes(next);
+      return next;
+    });
+  };
+
+  const handleClearPanne = (id: string) => {
+    setValidationError('');
+    setPannes(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, issue: '', price: 0 } : p);
+      syncPannes(next);
+      return next;
+    });
+  };
+
+  const handlePanneTextChange = (id: string, text: string) => {
+    setValidationError('');
+    const upper = text.toUpperCase();
+    const commonIssueObj = commonIssues.find(i => i.name.toLowerCase() === upper.trim().toLowerCase());
+    const unitPrice = commonIssueObj?.default_price || 0;
+
+    setPannes(prev => {
+      const next = prev.map(p => p.id === id ? { ...p, issue: upper, price: unitPrice } : p);
+      syncPannes(next);
+      return next;
+    });
+  };
+
+  const handleTogglePanneMode = (id: string) => {
+    setPannes(prev => prev.map(p => p.id === id ? { ...p, isCustom: !p.isCustom } : p));
+  };
+
+  const handleAddPanne = () => {
+    if (pannes.length >= 4) return;
+    setValidationError('');
+    const newSlot: PanneSlot = {
+      id: `panne-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      issue: '',
+      isCustom: false,
+      price: 0
+    };
+    const next = [...pannes, newSlot];
+    setPannes(next);
+    syncPannes(next);
+  };
+
+  const handleRemovePanne = (id: string) => {
+    if (pannes.length <= 1) return;
+    setValidationError('');
+    const next = pannes.filter(p => p.id !== id);
+    setPannes(next);
+    syncPannes(next);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -513,6 +604,12 @@ const CreateInvoice = () => {
         warrantyMonths: '0',
         notes: ''
       });
+      setPannes([
+        { id: 'panne-1', issue: '', isCustom: false, price: 0 },
+        { id: 'panne-2', issue: '', isCustom: false, price: 0 },
+        { id: 'panne-3', issue: '', isCustom: false, price: 0 },
+        { id: 'panne-4', issue: '', isCustom: false, price: 0 }
+      ]);
       setSelectedCustomerOption('manual');
       setCustomBrandMode(false);
       setCustomModelMode(false);
@@ -552,8 +649,9 @@ const CreateInvoice = () => {
       setValidationError('Veuillez choisir ou saisir le modèle exact de l\'appareil.');
       return false;
     }
-    if (!formData.deviceIssue.trim()) {
-      setValidationError('Veuillez sélectionner ou décrire la panne constatée.');
+    const hasAtLeastOnePanne = pannes.some(p => p.issue.trim().length > 0) || formData.deviceIssue.trim().length > 0;
+    if (!hasAtLeastOnePanne) {
+      setValidationError('Veuillez sélectionner ou décrire au moins une panne constatée (Panne 1).');
       return false;
     }
     setValidationError('');
@@ -628,6 +726,12 @@ const CreateInvoice = () => {
     setLoading(true);
     
     try {
+      const validPannes = pannes.filter(p => p.issue.trim().length > 0);
+      const issuesArray = validPannes.map(p => p.issue.trim().toUpperCase());
+      const combinedIssue = issuesArray.length > 1
+        ? issuesArray.map((iss, idx) => `${idx + 1}. ${iss}`).join(' • ')
+        : (issuesArray[0] || formData.deviceIssue.trim().toUpperCase());
+
       const newInvoice = {
         customer: {
           id: crypto.randomUUID(),
@@ -642,7 +746,8 @@ const CreateInvoice = () => {
           brand: formData.deviceBrand.trim().toUpperCase(),
           model: formData.deviceModel.trim().toUpperCase(),
           serialNumber: formData.deviceSerial.trim().toUpperCase(),
-          issue: formData.deviceIssue.trim().toUpperCase(),
+          issue: combinedIssue,
+          issues: issuesArray,
           password: formData.devicePassword.trim(),
           accessories: formData.deviceAccessories.trim().toUpperCase(),
         },
@@ -697,7 +802,11 @@ const CreateInvoice = () => {
   const formattedPrice = formData.price ? Number(formData.price).toLocaleString('fr-FR') : '0';
 
   const isStep1Done = Boolean(formData.customerName.trim() && formData.customerPhone.trim());
-  const isStep2Done = Boolean(formData.deviceBrand.trim() && formData.deviceModel.trim() && formData.deviceIssue.trim());
+  const isStep2Done = Boolean(
+    formData.deviceBrand.trim() &&
+    formData.deviceModel.trim() &&
+    (pannes.some(p => p.issue.trim().length > 0) || formData.deviceIssue.trim().length > 0)
+  );
   const isStep3Done = Boolean(formData.employeeId && formData.price);
 
   return (
@@ -1414,55 +1523,201 @@ const CreateInvoice = () => {
                   </div>
                 </div>
 
-                {/* 📋 4. LISTE DÉROULANTE PANNE & DIAGNOSTIC */}
-                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: '26px', marginBottom: '6px', gap: '8px' }}>
-                    <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', margin: 0, whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
-                      Panne & Diagnostic <span style={{ color: '#ef4444' }}>*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setCustomIssueMode(!customIssueMode)}
-                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap', padding: 0 }}
-                    >
-                      <Edit3 size={12} /> {customIssueMode ? 'Liste' : 'Saisie libre'}
-                    </button>
+                {/* 📋 4. GESTION DES 4 PANNES DIRECTEMENT ACCESSIBLES & COMMENTAIRE */}
+                <div style={{
+                  marginBottom: '1.5rem',
+                  padding: '1.25rem',
+                  backgroundColor: '#f8fafc',
+                  borderRadius: '12px',
+                  border: '1.5px solid #cbd5e1'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Wrench size={18} color="#2563eb" />
+                        <label className="form-label" style={{ fontWeight: 800, color: '#0f172a', margin: 0, fontSize: '0.95rem' }}>
+                          Diagnostic & Pannes (4 saisies possibles) <span style={{ color: '#ef4444' }}>*</span>
+                        </label>
+                      </div>
+                      <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                        Renseignez jusqu'à 4 pannes constatées sur cet appareil
+                      </span>
+                    </div>
+                    <span style={{
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      backgroundColor: '#eff6ff',
+                      color: '#2563eb',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      {pannes.filter(p => p.issue.trim()).length} / 4 renseignée{pannes.filter(p => p.issue.trim()).length > 1 ? 's' : ''}
+                    </span>
                   </div>
 
-                  {customIssueMode ? (
-                    <input 
-                      type="text" 
-                      name="deviceIssue" 
-                      required 
-                      className="form-control" 
-                      placeholder="Décrivez la panne constatée..." 
-                      style={{ fontWeight: 600, height: '46px' }}
-                      value={formData.deviceIssue} 
-                      onChange={handleChange} 
-                      autoFocus
-                    />
-                  ) : (
-                    <select
-                      name="deviceIssue"
-                      required
-                      className="form-control"
-                      value={formData.deviceIssue}
-                      onChange={handleSelectIssueDropdown}
-                      style={{ height: '46px', fontWeight: 600, border: '2px solid #bfdbfe', backgroundColor: '#ffffff', cursor: 'pointer' }}
-                    >
-                      <option value="" disabled>--- Sélectionnez la Panne / Diagnostic ---</option>
-                      {allIssues.map((issue, idx) => {
-                        const commonObj = commonIssues.find(i => i.name.toLowerCase() === issue.toLowerCase());
-                        const priceTag = commonObj?.default_price ? ` (${commonObj.default_price.toLocaleString()} FCFA)` : '';
-                        return (
-                          <option key={idx} value={issue}>
-                            🛠️ {issue}{priceTag}
-                          </option>
-                        );
-                      })}
-                      <option value="custom">➕ Autre panne (Saisie libre)...</option>
-                    </select>
+                  {/* Les 4 slots de panne */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {pannes.map((panne, index) => {
+                      const isFirst = index === 0;
+                      const isFilled = panne.issue.trim().length > 0;
+                      return (
+                        <div
+                          key={panne.id}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            borderRadius: '10px',
+                            border: isFirst ? '1.5px solid #93c5fd' : (isFilled ? '1.5px solid #86efac' : '1px solid #e2e8f0'),
+                            padding: '0.75rem 0.85rem',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{
+                                backgroundColor: isFirst ? '#2563eb' : (isFilled ? '#16a34a' : '#64748b'),
+                                color: '#ffffff',
+                                fontSize: '0.72rem',
+                                fontWeight: 800,
+                                padding: '2px 8px',
+                                borderRadius: '6px'
+                              }}>
+                                Panne #{index + 1} {isFirst ? '(Principale *)' : '(Optionnelle)'}
+                              </span>
+                              {panne.price && panne.price > 0 ? (
+                                <span style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: 700, backgroundColor: '#f0fdf4', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bbf7d0' }}>
+                                  +{panne.price.toLocaleString('fr-FR')} FCFA
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePanneMode(panne.id)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#2563eb',
+                                  fontSize: '0.74rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  padding: '2px 6px',
+                                  borderRadius: '4px',
+                                  backgroundColor: '#eff6ff'
+                                }}
+                              >
+                                <Edit3 size={11} /> {panne.isCustom ? 'Catalogue' : 'Saisie libre'}
+                              </button>
+
+                              {isFilled && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleClearPanne(panne.id)}
+                                  title="Effacer cette panne"
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#64748b',
+                                    fontSize: '0.74rem',
+                                    fontWeight: 600,
+                                    cursor: 'pointer',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                    backgroundColor: '#f1f5f9'
+                                  }}
+                                >
+                                  ✕ Effacer
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {panne.isCustom ? (
+                            <input
+                              type="text"
+                              required={isFirst}
+                              className="form-control"
+                              placeholder={isFirst ? "Tapez la panne principale (ex: ÉCRAN CASSÉ, NE S'ALLUME PLUS...)" : `Tapez la panne #${index + 1} (optionnelle)...`}
+                              style={{ fontWeight: 600, height: '42px', textTransform: 'uppercase' }}
+                              value={panne.issue}
+                              onChange={(e) => handlePanneTextChange(panne.id, e.target.value)}
+                              autoFocus={panne.isCustom && isFirst}
+                            />
+                          ) : (
+                            <select
+                              required={isFirst}
+                              className="form-control"
+                              value={panne.issue}
+                              onChange={(e) => handleSelectPanneDropdown(panne.id, e.target.value)}
+                              style={{
+                                height: '42px',
+                                fontWeight: 600,
+                                border: isFirst ? '1.5px solid #bfdbfe' : '1px solid #cbd5e1',
+                                backgroundColor: '#ffffff',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <option value="">{isFirst ? "--- 🛠️ Sélectionnez la Panne Principale (Obligatoire) ---" : `--- 🛠️ Sélectionnez la Panne #${index + 1} (Optionnelle) ---`}</option>
+                              {allIssues.map((issue, idx) => {
+                                const commonObj = commonIssues.find(i => i.name.toLowerCase() === issue.toLowerCase());
+                                const priceTag = commonObj?.default_price ? ` (${commonObj.default_price.toLocaleString()} FCFA)` : '';
+                                return (
+                                  <option key={idx} value={issue}>
+                                    🛠️ {issue}{priceTag}
+                                  </option>
+                                );
+                              })}
+                              <option value="custom">➕ Autre panne (Saisie libre)...</option>
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Total indicatif cumulé des pannes si au moins un tarif détecté */}
+                  {pannes.some(p => (p.price || 0) > 0) && (
+                    <div style={{
+                      marginTop: '10px',
+                      padding: '8px 12px',
+                      backgroundColor: '#f0fdf4',
+                      borderRadius: '8px',
+                      border: '1px solid #bbf7d0',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      fontSize: '0.84rem'
+                    }}>
+                      <span style={{ color: '#166534', fontWeight: 700 }}>
+                        💡 Tarif indicatif cumulé ({pannes.filter(p => p.issue.trim()).length} panne{pannes.filter(p => p.issue.trim()).length > 1 ? 's' : ''}) :
+                      </span>
+                      <span style={{ color: '#15803d', fontWeight: 900, fontSize: '0.95rem' }}>
+                        {pannes.reduce((sum, p) => sum + (p.price || 0), 0).toLocaleString('fr-FR')} FCFA
+                      </span>
+                    </div>
                   )}
+
+                  {/* 💬 COMMENTAIRE / OBSERVATIONS SUR LA PANNE (JUSTE EN BAS) */}
+                  <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1' }}>
+                    <label className="form-label" style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.85rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      💬 Commentaire & Observations sur les pannes
+                      <span style={{ fontSize: '0.72rem', fontWeight: 500, color: '#64748b' }}>(Optionnel - détails du diagnostic, remarques client...)</span>
+                    </label>
+                    <textarea
+                      name="notes"
+                      className="form-control"
+                      rows={3}
+                      style={{ fontSize: '0.88rem', borderRadius: '8px', minHeight: '75px', fontWeight: 500 }}
+                      placeholder="ex: L'écran scintille après quelques minutes d'utilisation, le téléphone a été en contact avec de l'eau, tester aussi le micro avant restitution..."
+                      value={formData.notes}
+                      onChange={handleChange}
+                    />
+                  </div>
                 </div>
 
 
@@ -1973,7 +2228,23 @@ const CreateInvoice = () => {
                 </div>
 
                 <div style={{ marginTop: '6px', fontSize: '0.82rem', color: '#475569', backgroundColor: '#f8fafc', padding: '6px 8px', borderRadius: '6px' }}>
-                  <strong>Panne :</strong> {formData.deviceIssue || <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 400 }}>Diagnostic...</span>}
+                  <div style={{ fontWeight: 700, marginBottom: '2px' }}>
+                    {pannes.filter(p => p.issue.trim()).length > 1 ? `Pannes (${pannes.filter(p => p.issue.trim()).length}) :` : 'Panne :'}
+                  </div>
+                  {pannes.filter(p => p.issue.trim()).length > 1 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '3px' }}>
+                      {pannes.filter(p => p.issue.trim()).map((p, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem' }}>
+                          <span style={{ backgroundColor: '#2563eb', color: '#fff', borderRadius: '50%', width: '14px', height: '14px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, flexShrink: 0 }}>
+                            {idx + 1}
+                          </span>
+                          <span style={{ fontWeight: 600, color: '#1e293b' }}>{p.issue}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <span>{pannes[0]?.issue || formData.deviceIssue || <span style={{ color: '#94a3b8', fontStyle: 'italic', fontWeight: 400 }}>Diagnostic...</span>}</span>
+                  )}
                 </div>
               </div>
 

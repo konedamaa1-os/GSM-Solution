@@ -39,6 +39,7 @@ export interface DeviceInfo {
   model: string;
   serialNumber?: string;
   issue: string;
+  issues?: string[];
   accessories?: string;
   password?: string;
 }

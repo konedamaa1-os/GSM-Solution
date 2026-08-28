@@ -242,7 +242,20 @@ const RepairTracking = () => {
                   {/* Appareil */}
                   <td style={{ padding: '1rem 0.5rem' }}>
                     <div style={{ fontWeight: 600 }}>{invoice.device.brand} {invoice.device.model}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{invoice.device.issue.substring(0, 32)}...</div>
+                    {invoice.device.issues && invoice.device.issues.length > 1 ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '0.68rem', backgroundColor: '#eff6ff', color: '#1d4ed8', padding: '1px 5px', borderRadius: '4px', fontWeight: 700, border: '1px solid #bfdbfe' }}>
+                          {invoice.device.issues.length} pannes
+                        </span>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }} title={invoice.device.issues.join(' • ')}>
+                          {invoice.device.issues[0].substring(0, 20)}...
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }} title={invoice.device.issue}>
+                        {invoice.device.issue ? `${invoice.device.issue.substring(0, 32)}${invoice.device.issue.length > 32 ? '...' : ''}` : 'Diagnostic'}
+                      </div>
+                    )}
                   </td>
 
                   {/* Technicien assigné */}

@@ -227,8 +227,23 @@ export const ShopPortal: React.FC<ShopPortalProps> = ({ shop }) => {
 
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', background: '#ffffff', padding: '1rem', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
                         <div>
-                          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Panne signalée</span>
-                          <p style={{ margin: '4px 0 0 0', fontWeight: 700, color: '#1e293b' }}>{device?.issue || 'Non spécifiée'}</p>
+                          <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
+                            {device?.issue && device.issue.includes(' • ') ? 'Pannes signalées' : 'Panne signalée'}
+                          </span>
+                          {device?.issue && device.issue.includes(' • ') ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: '4px' }}>
+                              {device.issue.split(' • ').map((iss: string, i: number) => (
+                                <div key={i} style={{ fontWeight: 700, color: '#1e293b', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                  <span style={{ backgroundColor: '#2563eb', color: '#fff', borderRadius: '50%', width: '15px', height: '15px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.62rem', fontWeight: 900, flexShrink: 0 }}>
+                                    {i + 1}
+                                  </span>
+                                  <span>{iss.replace(/^\d+[\.\)]\s*/, '')}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p style={{ margin: '4px 0 0 0', fontWeight: 700, color: '#1e293b' }}>{device?.issue || 'Non spécifiée'}</p>
+                          )}
                         </div>
                         <div>
                           <span style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Règlement</span>

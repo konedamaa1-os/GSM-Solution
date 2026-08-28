@@ -234,6 +234,13 @@ const InvoiceView = () => {
       statusText = `AVANCE PAYÉE : ${advanceAmount.toLocaleString('fr-FR')} F (Reste au retrait : ${remainingBalance.toLocaleString('fr-FR')} F)`;
     }
 
+    const issuesList = (invoice.device.issues && invoice.device.issues.length > 1)
+      ? invoice.device.issues.map((iss, i) => `  ${i + 1}. ${iss}`).join('\n')
+      : (invoice.device.issue || 'Diagnostic');
+    const issueTextLine = (invoice.device.issues && invoice.device.issues.length > 1)
+      ? `⚠️ Pannes déclarées :\n${issuesList}\n`
+      : `⚠️ Panne : ${invoice.device.issue}\n`;
+
     const receiptText = `*${shopName}* - REÇU DE RÉPARATION 80mm\n` +
       `--------------------------------\n` +
       `📄 N° Reçu : *${invoice.invoiceNumber}*\n` +
@@ -242,7 +249,8 @@ const InvoiceView = () => {
       `📱 Contact : ${invoice.customer.phone}\n` +
       `--------------------------------\n` +
       `🔧 Appareil : *${invoice.device.brand} ${invoice.device.model}*\n` +
-      `⚠️ Panne : ${invoice.device.issue}\n` +
+      issueTextLine +
+      (invoice.notes ? `💬 Commentaire : ${invoice.notes}\n` : '') +
       (invoice.device.accessories ? `📦 Accessoires : ${invoice.device.accessories}\n` : '') +
       `--------------------------------\n` +
       `💰 MONTANT TOTAL : *${invoice.price.toLocaleString('fr-FR')} FCFA*\n` +
@@ -560,15 +568,36 @@ const InvoiceView = () => {
                 <span style={{ fontWeight: 900, textTransform: 'uppercase', textAlign: 'right' }}>{invoice.device.brand} {invoice.device.model}</span>
               </div>
               <div style={{ marginBottom: '1px' }}>
-                <span style={{ color: '#64748b', fontWeight: 700 }}>PANNE :</span>
-                <div style={{ fontWeight: 800, backgroundColor: '#f8fafc', padding: '2px 5px', borderRadius: '3px', marginTop: '1px', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: '0.7rem' }}>
-                  🛠️ {invoice.device.issue}
-                </div>
+                <span style={{ color: '#64748b', fontWeight: 700 }}>
+                  {invoice.device.issues && invoice.device.issues.length > 1 ? `PANNES (${invoice.device.issues.length}) :` : 'PANNE :'}
+                </span>
+                {invoice.device.issues && invoice.device.issues.length > 1 ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                    {invoice.device.issues.map((iss, idx) => (
+                      <div key={idx} style={{ fontWeight: 800, backgroundColor: '#f8fafc', padding: '2px 5px', borderRadius: '3px', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: '0.68rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ backgroundColor: '#2563eb', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, flexShrink: 0 }}>
+                          {idx + 1}
+                        </span>
+                        <span>{iss}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ fontWeight: 800, backgroundColor: '#f8fafc', padding: '2px 5px', borderRadius: '3px', marginTop: '1px', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: '0.7rem' }}>
+                    🛠️ {invoice.device.issue}
+                  </div>
+                )}
               </div>
               {invoice.device.accessories && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginTop: '1px' }}>
                   <span style={{ color: '#64748b', fontWeight: 600 }}>Accessoires :</span>
                   <span style={{ fontWeight: 700 }}>{invoice.device.accessories}</span>
+                </div>
+              )}
+              {invoice.notes && (
+                <div style={{ fontSize: '0.65rem', marginTop: '2px', backgroundColor: '#f8fafc', padding: '2px 4px', borderRadius: '3px', border: '1px dashed #cbd5e1' }}>
+                  <span style={{ color: '#64748b', fontWeight: 700 }}>💬 Note/Commentaire : </span>
+                  <span style={{ color: '#0f172a', fontWeight: 600 }}>{invoice.notes}</span>
                 </div>
               )}
             </div>
@@ -840,11 +869,34 @@ const InvoiceView = () => {
               <div><span style={{ color: 'var(--text-secondary)' }}>Marque & Modèle :</span> <b>{invoice.device.brand} {invoice.device.model}</b></div>
               <div><span style={{ color: 'var(--text-secondary)' }}>Accessoires laissés :</span> {invoice.device.accessories || 'Aucun'}</div>
               <div style={{ gridColumn: 'span 2', marginTop: '0.5rem' }}>
-                <span style={{ color: 'var(--text-secondary)' }}>Panne déclarée :</span>
-                <p style={{ margin: '0.25rem 0', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', fontWeight: 500 }}>
-                  {invoice.device.issue}
-                </p>
+                <span style={{ color: 'var(--text-secondary)' }}>
+                  {invoice.device.issues && invoice.device.issues.length > 1 ? `Pannes déclarées (${invoice.device.issues.length}) :` : 'Panne déclarée :'}
+                </span>
+                {invoice.device.issues && invoice.device.issues.length > 1 ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '0.5rem', marginTop: '0.35rem' }}>
+                    {invoice.device.issues.map((iss, idx) => (
+                      <div key={idx} style={{ padding: '0.6rem 0.85rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.88rem' }}>
+                        <span style={{ backgroundColor: '#2563eb', color: '#fff', borderRadius: '50%', width: '20px', height: '20px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, flexShrink: 0 }}>
+                          {idx + 1}
+                        </span>
+                        <span>{iss}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ margin: '0.25rem 0', padding: '0.75rem', backgroundColor: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', fontWeight: 500 }}>
+                    {invoice.device.issue}
+                  </p>
+                )}
               </div>
+              {invoice.notes && (
+                <div style={{ gridColumn: 'span 2', marginTop: '0.4rem' }}>
+                  <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Commentaire / Observations :</span>
+                  <p style={{ margin: '0.2rem 0 0 0', padding: '0.6rem 0.75rem', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '0.85rem', color: '#334155', fontWeight: 500 }}>
+                    💬 {invoice.notes}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

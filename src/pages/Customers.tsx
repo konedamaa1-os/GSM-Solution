@@ -187,7 +187,7 @@ const Customers = () => {
                               {invoice.invoiceNumber} • {invoice.device.brand} {invoice.device.model}
                             </div>
                             <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
-                              Panne : {invoice.device.issue} • Déposé le {new Date(invoice.date).toLocaleDateString('fr-FR')}
+                              {invoice.device.issues && invoice.device.issues.length > 1 ? `Pannes (${invoice.device.issues.length}) : ${invoice.device.issues.join(', ')}` : `Panne : ${invoice.device.issue}`} • Déposé le {new Date(invoice.date).toLocaleDateString('fr-FR')}
                             </div>
                           </div>
 
