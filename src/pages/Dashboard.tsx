@@ -21,9 +21,9 @@ const Dashboard = () => {
   const recentInvoices = filteredInvoices.slice(0, 5);
 
   const paidInvoicesInPeriod = invoices.filter(inv => {
-    if (inv.paymentStatus !== 'Payé') return false;
+    if (inv.paymentStatus === 'Impayé') return false;
     
-    const invDate = new Date(inv.paidAt || inv.date);
+    const invDate = new Date(inv.balancePaidAt || inv.paidAt || inv.date);
     const now = new Date();
     
     switch (revenuePeriod) {
@@ -59,25 +59,45 @@ const Dashboard = () => {
     }
   });
 
-  const filteredRevenue = paidInvoicesInPeriod.reduce((sum, inv) => sum + inv.price, 0);
+  const filteredRevenue = paidInvoicesInPeriod.reduce((sum, inv) => {
+    if (inv.paymentStatus === 'Payé') return sum + inv.price;
+    if (inv.paymentStatus === 'Partiel') return sum + (inv.advancePayment || 0);
+    return sum;
+  }, 0);
 
   // Group revenue by collector
   const revenueByCollector = React.useMemo(() => {
     const map = new Map<string, { count: number; total: number }>();
     paidInvoicesInPeriod.forEach(inv => {
-      const collector = inv.paymentCollectorName || 'Non spécifié';
-      const prev = map.get(collector) || { count: 0, total: 0 };
-      map.set(collector, {
-        count: prev.count + 1,
-        total: prev.total + inv.price
-      });
+      if (inv.paymentStatus === 'Payé') {
+        if (inv.advancePayment && inv.advancePayment > 0 && inv.advancePayment < inv.price && inv.balancePaymentCollectorName) {
+          // Advance collector
+          const advCollector = inv.paymentCollectorName || 'Collaborateur';
+          const prevAdv = map.get(advCollector) || { count: 0, total: 0 };
+          map.set(advCollector, { count: prevAdv.count + 1, total: prevAdv.total + inv.advancePayment });
+          // Balance collector
+          const balCollector = inv.balancePaymentCollectorName;
+          const prevBal = map.get(balCollector) || { count: 0, total: 0 };
+          map.set(balCollector, { count: prevBal.count + 1, total: prevBal.total + (inv.price - inv.advancePayment) });
+        } else {
+          const collector = inv.balancePaymentCollectorName || inv.paymentCollectorName || 'Non spécifié';
+          const prev = map.get(collector) || { count: 0, total: 0 };
+          map.set(collector, { count: prev.count + 1, total: prev.total + inv.price });
+        }
+      } else if (inv.paymentStatus === 'Partiel') {
+        const collector = inv.paymentCollectorName || 'Non spécifié';
+        const prev = map.get(collector) || { count: 0, total: 0 };
+        map.set(collector, { count: prev.count + 1, total: prev.total + (inv.advancePayment || 0) });
+      }
     });
     return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
   }, [paidInvoicesInPeriod]);
 
-  const unpaidTotal = invoices
-    .filter(inv => inv.paymentStatus === 'Impayé')
-    .reduce((sum, inv) => sum + inv.price, 0);
+  const unpaidTotal = invoices.reduce((sum, inv) => {
+    if (inv.paymentStatus === 'Payé') return sum;
+    if (inv.paymentStatus === 'Partiel') return sum + Math.max(0, inv.price - (inv.advancePayment || 0));
+    return sum + inv.price;
+  }, 0);
 
   const getStatusBadge = (status: string) => {
     switch (status) {

@@ -9,7 +9,7 @@ interface AppContextType extends AppState {
   domainInfo: DomainInfo;
   addInvoice: (invoice: Omit<Invoice, 'id' | 'invoiceNumber' | 'date' | 'shop_id'>) => Promise<string | null | boolean>;
   updateInvoiceStatus: (id: string, status: Invoice['status']) => Promise<void>;
-  updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus'], collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string }) => Promise<void>;
+  updateInvoicePaymentStatus: (id: string, status: Invoice['paymentStatus'], collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string; advancePayment?: number; isBalanceSettlement?: boolean }) => Promise<void>;
   addEmployee: (employee: Omit<Employee, 'id' | 'shop_id'>) => Promise<void>;
   deleteEmployee: (id: string) => Promise<void>;
   updateSettings: (settings: ShopSettings) => Promise<void>;
@@ -155,13 +155,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         employeeId: inv.employee_id,
         device: Array.isArray(inv.device) ? inv.device[0] : inv.device,
         price: inv.price,
+        advancePayment: Number(inv.advance_payment) || 0,
         warrantyMonths: inv.warranty_months,
         status: inv.status as RepairStatus,
-        paymentStatus: inv.payment_status || 'Impayé',
+        paymentStatus: (inv.payment_status || 'Impayé') as PaymentStatus,
         paymentCollectorId: inv.payment_collector_id || undefined,
         paymentCollectorName: inv.payment_collector_name || undefined,
         paymentMethod: inv.payment_method || undefined,
         paidAt: inv.paid_at || undefined,
+        balancePaymentCollectorId: inv.balance_payment_collector_id || undefined,
+        balancePaymentCollectorName: inv.balance_payment_collector_name || undefined,
+        balancePaymentMethod: inv.balance_payment_method || undefined,
+        balancePaidAt: inv.balance_paid_at || undefined,
         notes: inv.notes
       }));
       setInvoices(formattedInvoices);
@@ -444,10 +449,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const isPaid = invoiceData.paymentStatus === 'Payé';
-    const paymentCollectorId = isPaid ? (invoiceData.paymentCollectorId || activeEmployee?.id || null) : null;
-    const paymentCollectorName = isPaid ? (invoiceData.paymentCollectorName || activeEmployee?.name || user?.email?.split('@')[0] || 'Technicien / Caisse') : null;
-    const paymentMethod = isPaid ? (invoiceData.paymentMethod || 'Espèces') : null;
-    const paidAt = isPaid ? (invoiceData.paidAt || new Date().toISOString()) : null;
+    const isPartial = invoiceData.paymentStatus === 'Partiel';
+    const hasAdvance = isPartial && (Number(invoiceData.advancePayment) > 0);
+    const advanceAmount = isPaid ? invoiceData.price : (hasAdvance ? Number(invoiceData.advancePayment) : 0);
+
+    const paymentCollectorId = (isPaid || hasAdvance) ? (invoiceData.paymentCollectorId || activeEmployee?.id || null) : null;
+    const paymentCollectorName = (isPaid || hasAdvance) ? (invoiceData.paymentCollectorName || activeEmployee?.name || user?.email?.split('@')[0] || 'Technicien / Caisse') : null;
+    const paymentMethod = (isPaid || hasAdvance) ? (invoiceData.paymentMethod || 'Espèces') : null;
+    const paidAt = (isPaid || hasAdvance) ? (invoiceData.paidAt || new Date().toISOString()) : null;
 
     // Insert Invoice
     const { data: newInvData, error: invError } = await supabase.from('tb_invoices').insert({
@@ -457,6 +466,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customer_id: customerId,
       employee_id: invoiceData.employeeId,
       price: invoiceData.price,
+      advance_payment: advanceAmount,
       warranty_months: invoiceData.warrantyMonths,
       status: invoiceData.status,
       payment_status: invoiceData.paymentStatus,
@@ -536,6 +546,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         shop_id: currentShop.id,
         invoiceNumber,
         date,
+        advancePayment: advanceAmount,
         customer: { ...finalCustomer, shop_id: currentShop.id },
         device: deviceData || { ...invoiceData.device, shop_id: currentShop.id },
         paymentCollectorId: paymentCollectorId || undefined,
@@ -559,14 +570,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateInvoicePaymentStatus = async (
     id: string, 
     payment_status: Invoice['paymentStatus'],
-    collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string }
+    collectorInfo?: { collectorId?: string; collectorName?: string; paymentMethod?: string; advancePayment?: number; isBalanceSettlement?: boolean }
   ) => {
-    const isPaid = payment_status === 'Payé';
     const targetInvoice = invoices.find(inv => inv.id === id);
+    if (!targetInvoice) return;
 
     // Strict Rule: Technicians CANNOT cancel/modify payment after 2 minutes (120 seconds)
-    if (!isManager && !isPaid && targetInvoice?.paymentStatus === 'Payé') {
-      const referenceTime = targetInvoice.paidAt || targetInvoice.date;
+    if (!isManager && payment_status === 'Impayé' && targetInvoice.paymentStatus !== 'Impayé') {
+      const referenceTime = targetInvoice.balancePaidAt || targetInvoice.paidAt || targetInvoice.date;
       if (referenceTime) {
         const diffSeconds = Math.floor((Date.now() - new Date(referenceTime).getTime()) / 1000);
         if (diffSeconds > 120) {
@@ -584,27 +595,79 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     if (!defaultCollectorName) defaultCollectorName = 'Technicien / Caisse';
 
-    const paymentCollectorId = isPaid ? (collectorInfo?.collectorId || activeEmployee?.id || null) : null;
-    const paymentCollectorName = isPaid ? (collectorInfo?.collectorName || defaultCollectorName) : null;
-    const paymentMethod = isPaid ? (collectorInfo?.paymentMethod || 'Espèces') : null;
-    const paidAt = isPaid ? new Date().toISOString() : null;
+    const collectorId = collectorInfo?.collectorId || activeEmployee?.id || null;
+    const collectorName = collectorInfo?.collectorName || defaultCollectorName;
+    const paymentMethod = collectorInfo?.paymentMethod || 'Espèces';
+    const nowIso = new Date().toISOString();
 
-    const { error } = await supabase.from('tb_invoices').update({ 
-      payment_status,
-      payment_collector_id: paymentCollectorId,
-      payment_collector_name: paymentCollectorName,
-      payment_method: paymentMethod,
-      paid_at: paidAt
-    }).eq('id', id);
+    let updatePayload: any = { payment_status };
+
+    if (payment_status === 'Payé') {
+      // If previously had partial advance or marked as balance settlement at pickup
+      if (targetInvoice.paymentStatus === 'Partiel' || collectorInfo?.isBalanceSettlement || (targetInvoice.advancePayment && targetInvoice.advancePayment > 0 && targetInvoice.advancePayment < targetInvoice.price)) {
+        updatePayload = {
+          payment_status: 'Payé',
+          balance_payment_collector_id: collectorId,
+          balance_payment_collector_name: collectorName,
+          balance_payment_method: paymentMethod,
+          balance_paid_at: nowIso
+        };
+      } else {
+        // Full direct payment
+        updatePayload = {
+          payment_status: 'Payé',
+          advance_payment: targetInvoice.price,
+          payment_collector_id: collectorId,
+          payment_collector_name: collectorName,
+          payment_method: paymentMethod,
+          paid_at: nowIso
+        };
+      }
+    } else if (payment_status === 'Partiel') {
+      const adv = collectorInfo?.advancePayment !== undefined ? collectorInfo.advancePayment : (targetInvoice.advancePayment || 0);
+      updatePayload = {
+        payment_status: 'Partiel',
+        advance_payment: adv,
+        payment_collector_id: collectorId,
+        payment_collector_name: collectorName,
+        payment_method: paymentMethod,
+        paid_at: nowIso,
+        balance_payment_collector_id: null,
+        balance_payment_collector_name: null,
+        balance_payment_method: null,
+        balance_paid_at: null
+      };
+    } else {
+      // Impayé
+      updatePayload = {
+        payment_status: 'Impayé',
+        advance_payment: 0,
+        payment_collector_id: null,
+        payment_collector_name: null,
+        payment_method: null,
+        paid_at: null,
+        balance_payment_collector_id: null,
+        balance_payment_collector_name: null,
+        balance_payment_method: null,
+        balance_paid_at: null
+      };
+    }
+
+    const { error } = await supabase.from('tb_invoices').update(updatePayload).eq('id', id);
 
     if (!error) {
       setInvoices(invoices.map(inv => inv.id === id ? { 
         ...inv, 
-        paymentStatus: payment_status,
-        paymentCollectorId: paymentCollectorId || undefined,
-        paymentCollectorName: paymentCollectorName || undefined,
-        paymentMethod: paymentMethod || undefined,
-        paidAt: paidAt || undefined
+        paymentStatus: updatePayload.payment_status,
+        advancePayment: updatePayload.advance_payment !== undefined ? updatePayload.advance_payment : inv.advancePayment,
+        paymentCollectorId: updatePayload.payment_collector_id !== undefined ? (updatePayload.payment_collector_id || undefined) : inv.paymentCollectorId,
+        paymentCollectorName: updatePayload.payment_collector_name !== undefined ? (updatePayload.payment_collector_name || undefined) : inv.paymentCollectorName,
+        paymentMethod: updatePayload.payment_method !== undefined ? (updatePayload.payment_method || undefined) : inv.paymentMethod,
+        paidAt: updatePayload.paid_at !== undefined ? (updatePayload.paid_at || undefined) : inv.paidAt,
+        balancePaymentCollectorId: updatePayload.balance_payment_collector_id !== undefined ? (updatePayload.balance_payment_collector_id || undefined) : inv.balancePaymentCollectorId,
+        balancePaymentCollectorName: updatePayload.balance_payment_collector_name !== undefined ? (updatePayload.balance_payment_collector_name || undefined) : inv.balancePaymentCollectorName,
+        balancePaymentMethod: updatePayload.balance_payment_method !== undefined ? (updatePayload.balance_payment_method || undefined) : inv.balancePaymentMethod,
+        balancePaidAt: updatePayload.balance_paid_at !== undefined ? (updatePayload.balance_paid_at || undefined) : inv.balancePaidAt
       } : inv));
     }
   };

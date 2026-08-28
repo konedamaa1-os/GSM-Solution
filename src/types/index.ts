@@ -31,7 +31,7 @@ export interface Customer {
 }
 
 export type RepairStatus = 'Pending' | 'In Progress' | 'Completed' | 'Cancelled';
-export type PaymentStatus = 'Payé' | 'Impayé';
+export type PaymentStatus = 'Payé' | 'Partiel' | 'Impayé';
 
 export interface DeviceInfo {
   shop_id?: string;
@@ -52,6 +52,7 @@ export interface Invoice {
   employeeId: string;
   device: DeviceInfo;
   price: number;
+  advancePayment?: number;
   warrantyMonths: number;
   status: RepairStatus;
   paymentStatus: PaymentStatus;
@@ -59,6 +60,10 @@ export interface Invoice {
   paymentCollectorName?: string;
   paymentMethod?: string;
   paidAt?: string;
+  balancePaymentCollectorId?: string;
+  balancePaymentCollectorName?: string;
+  balancePaymentMethod?: string;
+  balancePaidAt?: string;
   notes?: string;
 }
 

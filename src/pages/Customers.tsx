@@ -223,15 +223,30 @@ const Customers = () => {
                                 fontSize: '0.75rem',
                                 fontWeight: 700
                               }}>
-                                💰 Encaissé par : {invoice.paymentCollectorName || 'Atelier'} {invoice.paymentMethod ? `(${invoice.paymentMethod})` : ''}
+                                💰 Totalement Payé ({invoice.balancePaymentCollectorName || invoice.paymentCollectorName || 'Atelier'})
+                              </span>
+                            ) : invoice.paymentStatus === 'Partiel' ? (
+                              <span style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                backgroundColor: '#eff6ff',
+                                color: '#1d4ed8',
+                                border: '1px solid #bfdbfe',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.75rem',
+                                fontWeight: 700
+                              }}>
+                                💰 Avance : {(invoice.advancePayment || 0).toLocaleString('fr-FR')} F (Reste : {Math.max(0, invoice.price - (invoice.advancePayment || 0)).toLocaleString('fr-FR')} F)
                               </span>
                             ) : (
                               <span style={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 gap: '4px',
-                                backgroundColor: '#fef3c7',
-                                color: '#b45309',
+                                backgroundColor: '#fff7ed',
+                                color: '#c2410c',
                                 border: '1px solid #fde68a',
                                 padding: '3px 8px',
                                 borderRadius: '6px',
@@ -242,7 +257,7 @@ const Customers = () => {
                               </span>
                             )}
 
-                            {/* Montant */}
+                            {/* Montant Total */}
                             <span style={{ fontWeight: 700, color: '#0f172a', marginLeft: '4px' }}>
                               {invoice.price.toLocaleString('fr-FR')} FCFA
                             </span>

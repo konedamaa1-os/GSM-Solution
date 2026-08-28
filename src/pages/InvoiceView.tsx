@@ -101,10 +101,16 @@ const InvoiceView = () => {
 
   const techEmployee = employees.find(e => e.id === invoice.employeeId);
   const isPaid = invoice.paymentStatus === 'Payé';
+  const isPartial = invoice.paymentStatus === 'Partiel';
+  const advanceAmount = isPaid ? invoice.price : (invoice.advancePayment || 0);
+  const remainingBalance = isPaid ? 0 : Math.max(0, invoice.price - advanceAmount);
+
+  const [cashModalMode, setCashModalMode] = useState<'balance' | 'full' | 'advance'>('balance');
+  const [customAdvanceInput, setCustomAdvanceInput] = useState<string>('');
 
   const getModificationWindow = () => {
     if (isManager) return { canModify: true, remainingSec: Infinity, isManager: true };
-    const refTime = invoice.paidAt || invoice.date;
+    const refTime = invoice.balancePaidAt || invoice.paidAt || invoice.date;
     if (!refTime) return { canModify: false, remainingSec: 0, isManager: false };
     const diff = Math.floor((nowTimestamp - new Date(refTime).getTime()) / 1000);
     const remaining = 120 - diff;
@@ -125,7 +131,13 @@ const InvoiceView = () => {
     } else if (employees.length > 0) {
       setSelectedCollectorId(employees[0].id);
     }
-    setSelectedPaymentMethod(invoice.paymentMethod || 'Espèces');
+    setSelectedPaymentMethod('Espèces');
+    if (isPartial) {
+      setCashModalMode('balance');
+    } else {
+      setCashModalMode('full');
+      setCustomAdvanceInput(invoice.price ? String(Math.floor(invoice.price / 2)) : '');
+    }
     setShowCashModal(true);
   };
 
@@ -135,11 +147,37 @@ const InvoiceView = () => {
       const collectorObj = employees.find(e => e.id === selectedCollectorId);
       const collectorName = collectorObj?.name || activeEmployee?.name || user?.email?.split('@')[0] || 'Technicien';
 
-      await updateInvoicePaymentStatus(invoice.id, 'Payé', {
-        collectorId: selectedCollectorId || undefined,
-        collectorName: collectorName,
-        paymentMethod: selectedPaymentMethod
-      });
+      if (cashModalMode === 'balance') {
+        // Encaisser le solde au retrait -> Devient 'Payé'
+        await updateInvoicePaymentStatus(invoice.id, 'Payé', {
+          collectorId: selectedCollectorId || undefined,
+          collectorName: collectorName,
+          paymentMethod: selectedPaymentMethod,
+          isBalanceSettlement: true
+        });
+      } else if (cashModalMode === 'full') {
+        // Encaisser la totalité -> Devient 'Payé'
+        await updateInvoicePaymentStatus(invoice.id, 'Payé', {
+          collectorId: selectedCollectorId || undefined,
+          collectorName: collectorName,
+          paymentMethod: selectedPaymentMethod
+        });
+      } else if (cashModalMode === 'advance') {
+        // Encaisser une avance partielle -> Devient 'Partiel'
+        const adv = Number(customAdvanceInput);
+        if (!adv || adv <= 0 || adv >= invoice.price) {
+          alert("Veuillez indiquer un montant d'avance valide inférieur au prix total.");
+          setIsSubmitting(false);
+          return;
+        }
+        await updateInvoicePaymentStatus(invoice.id, 'Partiel', {
+          collectorId: selectedCollectorId || undefined,
+          collectorName: collectorName,
+          paymentMethod: selectedPaymentMethod,
+          advancePayment: adv
+        });
+      }
+
       setShowCashModal(false);
     } catch (err: any) {
       alert("Erreur lors de l'encaissement: " + (err.message || ''));
@@ -189,6 +227,13 @@ const InvoiceView = () => {
     if (cleanPhone.length === 10 && !cleanPhone.startsWith('225')) {
       cleanPhone = '225' + cleanPhone;
     }
+    let statusText = 'IMPAYÉ (À régler au retrait ⏳)';
+    if (isPaid) {
+      statusText = 'TOTALEMENT PAYÉ & RÉGLÉ ✅';
+    } else if (isPartial) {
+      statusText = `AVANCE PAYÉE : ${advanceAmount.toLocaleString('fr-FR')} F (Reste au retrait : ${remainingBalance.toLocaleString('fr-FR')} F)`;
+    }
+
     const receiptText = `*${shopName}* - REÇU DE RÉPARATION 80mm\n` +
       `--------------------------------\n` +
       `📄 N° Reçu : *${invoice.invoiceNumber}*\n` +
@@ -201,8 +246,11 @@ const InvoiceView = () => {
       (invoice.device.accessories ? `📦 Accessoires : ${invoice.device.accessories}\n` : '') +
       `--------------------------------\n` +
       `💰 MONTANT TOTAL : *${invoice.price.toLocaleString('fr-FR')} FCFA*\n` +
-      `📌 Statut : *${isPaid ? 'RÉGLÉ & PAYÉ ✅' : 'IMPAYÉ (À régler au retrait) ⏳'}*\n` +
-      (isPaid && invoice.paymentCollectorName ? `👤 Encaissé par : ${invoice.paymentCollectorName} (${invoice.paymentMethod || 'Espèces'})\n` : '') +
+      (isPartial ? `💵 Avance versée : *${advanceAmount.toLocaleString('fr-FR')} FCFA*\n⏳ *Reste au retrait : ${remainingBalance.toLocaleString('fr-FR')} FCFA*\n` : '') +
+      (isPaid && invoice.advancePayment && invoice.advancePayment < invoice.price ? `💵 Avance : ${invoice.advancePayment.toLocaleString('fr-FR')} F | Solde au retrait : ${(invoice.price - invoice.advancePayment).toLocaleString('fr-FR')} F\n` : '') +
+      `📌 Statut Règlement : *${statusText}*\n` +
+      (invoice.paymentCollectorName ? `👤 Encaissement : ${invoice.paymentCollectorName} (${invoice.paymentMethod || 'Espèces'})\n` : '') +
+      (invoice.balancePaymentCollectorName ? `👤 Solde retrait encaissé par : ${invoice.balancePaymentCollectorName} (${invoice.balancePaymentMethod || 'Espèces'})\n` : '') +
       `👨‍🔧 Technicien : ${techEmployee?.name || 'Atelier'}\n` +
       `--------------------------------\n` +
       `📍 ${shopAddress}\n` +
@@ -340,7 +388,7 @@ const InvoiceView = () => {
                 alignItems: 'center',
                 gap: '6px'
               }}>
-                <CheckCircle2 size={16} /> Payé ({invoice.paymentCollectorName ? `Par ${invoice.paymentCollectorName}` : 'Encaissé'})
+                <CheckCircle2 size={16} /> Totalement Payé
               </span>
 
               {/* 2-min indicator or cancel button */}
@@ -359,13 +407,48 @@ const InvoiceView = () => {
                     onClick={handleToggleUnpaid}
                     style={{ fontSize: '0.78rem', padding: '5px 10px', color: '#b45309', borderColor: '#fde68a', backgroundColor: '#fef3c7', fontWeight: 600 }}
                   >
-                    ⏱️ Annuler encaissement ({modWindow.remainingSec}s)
+                    ⏱️ Annuler ({modWindow.remainingSec}s)
                   </button>
                 ) : (
                   <span style={{ fontSize: '0.75rem', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '6px', fontWeight: 500 }}>
                     {"🔒 Verrouillé (> 2 min)"}
                   </span>
                 )
+              )}
+            </div>
+          ) : isPartial ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                fontSize: '0.85rem',
+                fontWeight: 700,
+                backgroundColor: '#eff6ff',
+                color: '#1d4ed8',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                border: '1px solid #bfdbfe'
+              }}>
+                💰 Avance : {advanceAmount.toLocaleString('fr-FR')} F (Reste : {remainingBalance.toLocaleString('fr-FR')} F)
+              </span>
+
+              <button 
+                className="btn btn-primary" 
+                onClick={openCashModal}
+                style={{ backgroundColor: '#16a34a', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 14px', fontSize: '0.85rem' }}
+              >
+                <CreditCard size={16} /> Encaisser le solde ({remainingBalance.toLocaleString('fr-FR')} F)
+              </button>
+
+              {isManager && (
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={handleToggleUnpaid}
+                  style={{ fontSize: '0.8rem', padding: '6px 10px' }}
+                >
+                  Annuler avance
+                </button>
               )}
             </div>
           ) : (
@@ -499,6 +582,20 @@ const InvoiceView = () => {
                 {invoice.price.toLocaleString('fr-FR')} <span style={{ fontSize: '0.95rem' }}>FCFA</span>
               </div>
               
+              {/* Détail Avance et Reste si Partiel ou Payé avec avance */}
+              {isPartial && (
+                <div style={{ margin: '6px 8px', padding: '6px', backgroundColor: '#ffffff', borderRadius: '6px', border: '1px solid #bfdbfe' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#1e40af', fontWeight: 700 }}>
+                    <span>Avance versée :</span>
+                    <span>{advanceAmount.toLocaleString('fr-FR')} FCFA</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#c2410c', fontWeight: 900, marginTop: '2px', borderTop: '1px dashed #fed7aa', paddingTop: '3px' }}>
+                    <span>SOLDE AU RETRAIT :</span>
+                    <span>{remainingBalance.toLocaleString('fr-FR')} FCFA</span>
+                  </div>
+                </div>
+              )}
+
               <div style={{ marginTop: '4px' }}>
                 {isPaid ? (
                   <span style={{
@@ -510,7 +607,20 @@ const InvoiceView = () => {
                     fontWeight: 900,
                     fontSize: '0.85rem'
                   }}>
-                    ✅ PAYÉ & RÉGLÉ ({invoice.paymentMethod || 'Espèces'})
+                    ✅ TOTALEMENT RÉGLÉ ({invoice.balancePaymentMethod || invoice.paymentMethod || 'Espèces'})
+                  </span>
+                ) : isPartial ? (
+                  <span style={{
+                    display: 'inline-block',
+                    backgroundColor: '#eff6ff',
+                    color: '#1d4ed8',
+                    padding: '4px 12px',
+                    borderRadius: '6px',
+                    fontWeight: 900,
+                    fontSize: '0.82rem',
+                    border: '1px solid #93c5fd'
+                  }}>
+                    🟡 AVANCE REÇUE (Solde à payer)
                   </span>
                 ) : (
                   <span style={{
@@ -527,9 +637,15 @@ const InvoiceView = () => {
                 )}
               </div>
 
-              {isPaid && invoice.paymentCollectorName && (
+              {/* Traçabilité Encaisseurs */}
+              {invoice.paymentCollectorName && (
                 <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '4px', fontWeight: 600 }}>
-                  Encaissé par : <strong>{invoice.paymentCollectorName}</strong>
+                  {isPartial ? "Avance reçue par :" : "Encaissé par :"} <strong>{invoice.paymentCollectorName}</strong>
+                </div>
+              )}
+              {invoice.balancePaymentCollectorName && (
+                <div style={{ fontSize: '0.72rem', color: '#15803d', marginTop: '2px', fontWeight: 700 }}>
+                  Solde retrait reçu par : <strong>{invoice.balancePaymentCollectorName}</strong>
                 </div>
               )}
             </div>
@@ -746,9 +862,30 @@ const InvoiceView = () => {
                     <span style={{ fontSize: '0.85rem', color: '#64748b' }}>Appareil : {invoice.device.brand} {invoice.device.model} ({invoice.device.issue})</span>
                   </td>
                   <td style={{ padding: '1rem', textAlign: 'right', fontWeight: 'bold', fontSize: '1.2rem', color: 'var(--primary-color)' }}>
-                    {invoice.price.toLocaleString()} FCFA
+                    {invoice.price.toLocaleString('fr-FR')} FCFA
                   </td>
                 </tr>
+                {/* Ligne Avance / Acompte */}
+                {(isPartial || (invoice.advancePayment && invoice.advancePayment > 0)) && (
+                  <>
+                    <tr style={{ backgroundColor: '#eff6ff' }}>
+                      <td style={{ padding: '0.75rem 1rem', color: '#1e40af', fontWeight: 600, fontSize: '0.9rem' }}>
+                        💰 Acompte / Avance versée à la prise en charge {invoice.paymentCollectorName ? `(Encaissée par ${invoice.paymentCollectorName})` : ''}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 700, color: '#1e40af', fontSize: '1rem' }}>
+                        - {advanceAmount.toLocaleString('fr-FR')} FCFA
+                      </td>
+                    </tr>
+                    <tr style={{ backgroundColor: isPaid ? '#f0fdf4' : '#fff7ed', borderTop: '2px solid #cbd5e1' }}>
+                      <td style={{ padding: '0.75rem 1rem', fontWeight: 800, color: isPaid ? '#15803d' : '#c2410c', fontSize: '1rem' }}>
+                        {isPaid ? "✅ Solde restant réglé au retrait :" : "⏳ RESTE À PAYER AU RETRAIT :"}
+                      </td>
+                      <td style={{ padding: '0.75rem 1rem', textAlign: 'right', fontWeight: 900, color: isPaid ? '#15803d' : '#ea580c', fontSize: '1.2rem' }}>
+                        {remainingBalance.toLocaleString('fr-FR')} FCFA
+                      </td>
+                    </tr>
+                  </>
+                )}
               </tbody>
             </table>
           </div>
@@ -768,8 +905,17 @@ const InvoiceView = () => {
             </div>
             <div style={{ textAlign: 'center' }}>
               <div style={{ borderTop: '1px solid #94a3b8', paddingTop: '0.5rem', width: '90%', margin: '0 auto', fontSize: '0.8rem' }}>
-                Encaissé par :<br />
-                <strong>{invoice.paymentCollectorName || (isPaid ? 'Caisse / Atelier' : '—')}</strong>
+                {invoice.balancePaymentCollectorName ? (
+                  <>
+                    Solde retrait encaissé par :<br />
+                    <strong>{invoice.balancePaymentCollectorName}</strong>
+                  </>
+                ) : (
+                  <>
+                    Encaissé par :<br />
+                    <strong>{invoice.paymentCollectorName || (isPaid ? 'Caisse / Atelier' : '—')}</strong>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -778,7 +924,7 @@ const InvoiceView = () => {
             {shopTerms}
           </div>
         </div>
-
+      )}
 
       {/* MODAL ENCAISSEMENT & TRACABILITE ENCAISSEUR */}
       {showCashModal && (
@@ -803,10 +949,11 @@ const InvoiceView = () => {
             border: '1px solid #e2e8f0'
           }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <DollarSign size={20} color="#16a34a" /> Encaisser le règlement
+                  <DollarSign size={20} color="#16a34a" /> 
+                  {isPartial ? "Encaisser le solde au retrait" : "Encaisser le règlement"}
                 </h3>
                 <span style={{ fontSize: '0.85rem', color: '#64748b' }}>
                   Facture {invoice.invoiceNumber} • {invoice.customer.name}
@@ -821,21 +968,96 @@ const InvoiceView = () => {
               </button>
             </div>
 
+            {/* If Impayé: Options to pay full or advance */}
+            {!isPartial && !isPaid && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setCashModalMode('full')}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: cashModalMode === 'full' ? 700 : 500,
+                    backgroundColor: cashModalMode === 'full' ? '#f0fdf4' : '#ffffff',
+                    color: cashModalMode === 'full' ? '#15803d' : '#475569',
+                    border: cashModalMode === 'full' ? '2px solid #22c55e' : '1px solid #cbd5e1',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ✅ Tout solder ({invoice.price.toLocaleString('fr-FR')} F)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCashModalMode('advance')}
+                  style={{
+                    padding: '8px',
+                    borderRadius: '8px',
+                    fontSize: '0.82rem',
+                    fontWeight: cashModalMode === 'advance' ? 700 : 500,
+                    backgroundColor: cashModalMode === 'advance' ? '#eff6ff' : '#ffffff',
+                    color: cashModalMode === 'advance' ? '#1d4ed8' : '#475569',
+                    border: cashModalMode === 'advance' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                    cursor: 'pointer'
+                  }}
+                >
+                  💰 Encaisser une avance
+                </button>
+              </div>
+            )}
+
             {/* Montant Card */}
             <div style={{
-              backgroundColor: '#f0fdf4',
-              border: '1.5px solid #bbf7d0',
+              backgroundColor: isPartial ? '#eff6ff' : (cashModalMode === 'advance' ? '#eff6ff' : '#f0fdf4'),
+              border: `1.5px solid ${isPartial || cashModalMode === 'advance' ? '#bfdbfe' : '#bbf7d0'}`,
               borderRadius: '12px',
               padding: '1rem',
               textAlign: 'center',
-              marginBottom: '1.5rem'
+              marginBottom: '1.25rem'
             }}>
-              <div style={{ fontSize: '0.8rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>
-                Montant total à percevoir
-              </div>
-              <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#15803d', marginTop: '2px' }}>
-                {invoice.price.toLocaleString('fr-FR')} <span style={{ fontSize: '1.1rem' }}>FCFA</span>
-              </div>
+              {isPartial ? (
+                <>
+                  <div style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Solde restant à percevoir au retrait
+                  </div>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#1d4ed8', marginTop: '2px' }}>
+                    {remainingBalance.toLocaleString('fr-FR')} <span style={{ fontSize: '1.1rem' }}>FCFA</span>
+                  </div>
+                  <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '4px' }}>
+                    (Total: {invoice.price.toLocaleString('fr-FR')} F • Avance déjà versée: {advanceAmount.toLocaleString('fr-FR')} F)
+                  </div>
+                </>
+              ) : cashModalMode === 'advance' ? (
+                <>
+                  <div style={{ fontSize: '0.78rem', color: '#1e40af', fontWeight: 700, textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Montant de l'avance à encaisser (FCFA)
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    max={invoice.price - 1}
+                    value={customAdvanceInput}
+                    onChange={e => setCustomAdvanceInput(e.target.value)}
+                    placeholder="Montant avance"
+                    className="form-control"
+                    style={{ fontSize: '1.2rem', fontWeight: 800, textAlign: 'center', color: '#1d4ed8', border: '2px solid #3b82f6' }}
+                  />
+                  {customAdvanceInput && (
+                    <div style={{ fontSize: '0.78rem', color: '#ea580c', fontWeight: 700, marginTop: '6px' }}>
+                      Reste à payer au retrait : {Math.max(0, invoice.price - Number(customAdvanceInput)).toLocaleString('fr-FR')} FCFA
+                    </div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: '0.8rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>
+                    Montant total à percevoir
+                  </div>
+                  <div style={{ fontSize: '1.85rem', fontWeight: 900, color: '#15803d', marginTop: '2px' }}>
+                    {invoice.price.toLocaleString('fr-FR')} <span style={{ fontSize: '1.1rem' }}>FCFA</span>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Form Fields */}

@@ -191,15 +191,18 @@ const CreateInvoice = () => {
     deviceAccessories: '',
     employeeId: activeEmployee ? activeEmployee.id : (employees.length > 0 ? employees[0].id : ''),
     price: '',
+    advancePayment: '',
     warrantyMonths: '0',
     notes: '',
-    paymentStatus: 'Impayé' as 'Payé' | 'Impayé',
+    paymentStatus: 'Impayé' as 'Payé' | 'Partiel' | 'Impayé',
     paymentCollectorId: activeEmployee ? activeEmployee.id : (employees.length > 0 ? employees[0].id : ''),
     paymentMethod: 'Espèces'
   });
 
   // Client régulier sélectionné
   const [recognizedCustomer, setRecognizedCustomer] = useState<RegularCustomerProfile | null>(null);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState<string>('');
+  const [showSearchDropdown, setShowSearchDropdown] = useState<boolean>(false);
 
   // Extraire la liste complète des clients réguliers avec leur historique de réparations
   const regularCustomersList = useMemo(() => {
@@ -224,6 +227,8 @@ const CreateInvoice = () => {
           if (inv.customer.name && !entry.customer.name) {
             entry.customer.name = inv.customer.name;
           }
+          if (inv.customer.phone2 && !entry.customer.phone2) entry.customer.phone2 = inv.customer.phone2;
+          if (inv.customer.phone3 && !entry.customer.phone3) entry.customer.phone3 = inv.customer.phone3;
         }
       }
     });
@@ -234,6 +239,43 @@ const CreateInvoice = () => {
       return nameA.localeCompare(nameB);
     });
   }, [invoices]);
+
+  // Helper pour normaliser les numéros de téléphone (supprimer espaces, tirets, points)
+  const normalizePhone = (p?: string) => (p || '').replace(/[\s\-_.]/g, '');
+
+  // Résultats de la recherche en temps réel d'un ancien client
+  const searchedCustomers = useMemo(() => {
+    const q = customerSearchQuery.trim().toLowerCase();
+    if (!q) return [];
+    const cleanQ = normalizePhone(q);
+    return regularCustomersList.filter(item => {
+      const nameMatch = (item.customer.name || '').toLowerCase().includes(q);
+      const p1Match = normalizePhone(item.customer.phone).includes(cleanQ);
+      const p2Match = normalizePhone(item.customer.phone2).includes(cleanQ);
+      const p3Match = normalizePhone(item.customer.phone3).includes(cleanQ);
+      return nameMatch || (cleanQ.length >= 2 && (p1Match || p2Match || p3Match));
+    }).slice(0, 6);
+  }, [customerSearchQuery, regularCustomersList]);
+
+  // Détection instantanée : À qui appartient le Contact 1 saisi ?
+  const existingOwnerPhone1 = useMemo(() => {
+    const raw = normalizePhone(formData.customerPhone);
+    if (!raw || raw.length < 6) return null;
+    return regularCustomersList.find(c => {
+      const p1 = normalizePhone(c.customer.phone);
+      const p2 = normalizePhone(c.customer.phone2);
+      const p3 = normalizePhone(c.customer.phone3);
+      return p1 === raw || (p2 && p2 === raw) || (p3 && p3 === raw);
+    }) || null;
+  }, [formData.customerPhone, regularCustomersList]);
+
+  // Détection d'un conflit de nom (Le numéro appartient à X, mais on a saisi Y)
+  const isPhone1Conflict = useMemo(() => {
+    if (!existingOwnerPhone1) return false;
+    const currentName = formData.customerName.trim().toUpperCase();
+    const existingName = (existingOwnerPhone1.customer.name || '').trim().toUpperCase();
+    return currentName.length > 0 && currentName !== existingName;
+  }, [existingOwnerPhone1, formData.customerName]);
 
   // Auto-assign connected technician / employee by default
   useEffect(() => {
@@ -276,7 +318,22 @@ const CreateInvoice = () => {
     return Array.from(new Set([...defaults, ...fromIssues, ...fromInvoices].filter(Boolean))).sort((a, b) => a.localeCompare(b));
   }, [commonIssues, invoices]);
 
-  // 1. GESTION LISTE DÉROULANTE CLIENT
+  // 1. GESTION SÉLECTION D'UN CLIENT
+  const handleSelectCustomerProfile = (found: RegularCustomerProfile) => {
+    setFormData(prev => ({
+      ...prev,
+      customerName: (found.customer.name || '').toUpperCase(),
+      customerPhone: found.customer.phone || '',
+      customerPhone2: found.customer.phone2 || '',
+      customerPhone3: found.customer.phone3 || ''
+    }));
+    setRecognizedCustomer(found);
+    setSelectedCustomerOption(found.customer.phone);
+    setCustomerSearchQuery('');
+    setShowSearchDropdown(false);
+    setValidationError('');
+  };
+
   const handleSelectCustomerDropdown = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const val = e.target.value;
     setSelectedCustomerOption(val);
@@ -296,14 +353,7 @@ const CreateInvoice = () => {
 
     const found = regularCustomersList.find(item => item.customer.phone === val);
     if (found) {
-      setFormData(prev => ({
-        ...prev,
-        customerName: (found.customer.name || '').toUpperCase(),
-        customerPhone: found.customer.phone || '',
-        customerPhone2: found.customer.phone2 || '',
-        customerPhone3: found.customer.phone3 || ''
-      }));
-      setRecognizedCustomer(found);
+      handleSelectCustomerProfile(found);
     }
   };
 
@@ -394,18 +444,29 @@ const CreateInvoice = () => {
     setFormData(prev => {
       const newData = { ...prev, [name]: processedValue };
       
-      // Auto-remplissage des contacts si le téléphone correspond à un client existant
+      // Auto-remplissage et détection instantanée du contact
       if (name === 'customerPhone') {
-        const found = regularCustomersList.find(c => c.customer.phone === processedValue.trim());
-        if (found) {
-          newData.customerName = (found.customer.name || '').toUpperCase();
-          newData.customerPhone2 = found.customer.phone2 || '';
-          newData.customerPhone3 = found.customer.phone3 || '';
-          setRecognizedCustomer(found);
-          setSelectedCustomerOption(found.customer.phone);
-        } else {
-          setRecognizedCustomer(null);
-          setSelectedCustomerOption('manual');
+        const raw = normalizePhone(processedValue);
+        if (raw.length >= 6) {
+          const found = regularCustomersList.find(c => {
+            const p1 = normalizePhone(c.customer.phone);
+            const p2 = normalizePhone(c.customer.phone2);
+            const p3 = normalizePhone(c.customer.phone3);
+            return p1 === raw || (p2 && p2 === raw) || (p3 && p3 === raw);
+          });
+          if (found) {
+            // Si le nom était vide ou correspond, on le pré-remplit
+            if (!newData.customerName.trim() || newData.customerName.trim() === (found.customer.name || '').toUpperCase()) {
+              newData.customerName = (found.customer.name || '').toUpperCase();
+              newData.customerPhone2 = found.customer.phone2 || '';
+              newData.customerPhone3 = found.customer.phone3 || '';
+            }
+            setRecognizedCustomer(found);
+            setSelectedCustomerOption(found.customer.phone);
+          } else {
+            setRecognizedCustomer(null);
+            setSelectedCustomerOption('manual');
+          }
         }
       }
       
@@ -472,6 +533,11 @@ const CreateInvoice = () => {
       setValidationError('Veuillez renseigner le numéro de contact principal (Contact 1).');
       return false;
     }
+    // Strict Uniqueness check: Two different customers cannot have the exact same phone number
+    if (isPhone1Conflict && existingOwnerPhone1) {
+      setValidationError(`🚨 Conflit d'unicité : Le numéro "${formData.customerPhone}" est déjà enregistré pour le client "${existingOwnerPhone1.customer.name}". Deux clients différents ne peuvent pas utiliser le même numéro de téléphone.`);
+      return false;
+    }
     setValidationError('');
     return true;
   };
@@ -503,6 +569,18 @@ const CreateInvoice = () => {
     if (!formData.price || Number(formData.price) < 0) {
       setValidationError('Veuillez indiquer le montant total convenu pour la réparation.');
       return false;
+    }
+    if (formData.paymentStatus === 'Partiel') {
+      const adv = Number(formData.advancePayment);
+      const total = Number(formData.price);
+      if (!formData.advancePayment || adv <= 0) {
+        setValidationError('Veuillez saisir le montant de l\'avance versée (acompte).');
+        return false;
+      }
+      if (adv >= total) {
+        setValidationError('Le montant de l\'avance ne peut pas être supérieur ou égal au montant total. Sélectionnez "Payé" si le client règle tout.');
+        return false;
+      }
     }
     setValidationError('');
     return true;
@@ -570,13 +648,14 @@ const CreateInvoice = () => {
         },
         employeeId: formData.employeeId,
         price: Number(formData.price) || 0,
+        advancePayment: formData.paymentStatus === 'Partiel' ? (Number(formData.advancePayment) || 0) : (formData.paymentStatus === 'Payé' ? (Number(formData.price) || 0) : 0),
         warrantyMonths: Number(formData.warrantyMonths) || 0,
         status: 'In Progress' as const,
         paymentStatus: formData.paymentStatus,
-        paymentCollectorId: formData.paymentStatus === 'Payé' ? (formData.paymentCollectorId || undefined) : undefined,
-        paymentCollectorName: formData.paymentStatus === 'Payé' ? (employees.find(e => e.id === formData.paymentCollectorId)?.name || activeEmployee?.name || user?.email?.split('@')[0] || 'Collaborateur') : undefined,
-        paymentMethod: formData.paymentStatus === 'Payé' ? formData.paymentMethod : undefined,
-        paidAt: formData.paymentStatus === 'Payé' ? new Date().toISOString() : undefined,
+        paymentCollectorId: (formData.paymentStatus === 'Payé' || formData.paymentStatus === 'Partiel') ? (formData.paymentCollectorId || undefined) : undefined,
+        paymentCollectorName: (formData.paymentStatus === 'Payé' || formData.paymentStatus === 'Partiel') ? (employees.find(e => e.id === formData.paymentCollectorId)?.name || activeEmployee?.name || user?.email?.split('@')[0] || 'Collaborateur') : undefined,
+        paymentMethod: (formData.paymentStatus === 'Payé' || formData.paymentStatus === 'Partiel') ? formData.paymentMethod : undefined,
+        paidAt: (formData.paymentStatus === 'Payé' || formData.paymentStatus === 'Partiel') ? new Date().toISOString() : undefined,
         notes: formData.notes.trim().toUpperCase()
       };
       
@@ -840,47 +919,110 @@ const CreateInvoice = () => {
                   )}
                 </div>
 
-                {/* 📋 1. LISTE DÉROULANTE DES CLIENTS EXISTANTS */}
+                {/* 🔍 RECHERCHE INSTANTANÉE D'UN ANCIEN CLIENT */}
                 <div style={{
-                  backgroundColor: '#eff6ff',
-                  border: '1.5px solid #bfdbfe',
+                  backgroundColor: '#f0fdf4',
+                  border: '1.5px solid #86efac',
                   borderRadius: '14px',
                   padding: '1.25rem',
-                  marginBottom: '1.5rem'
+                  marginBottom: '1.5rem',
+                  position: 'relative'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: 700, color: '#1e40af', margin: 0 }}>
-                      <List size={17} color="#2563eb" />
-                      Liste Déroulante des Clients :
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: 800, color: '#166534', margin: 0 }}>
+                      <Search size={17} color="#16a34a" />
+                      Rechercher un Ancien Client (Nom ou Téléphone) :
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                      {regularCustomersList.length} client(s) répertorié(s)
+                    <span style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 600 }}>
+                      {regularCustomersList.length} client(s) en mémoire
                     </span>
                   </div>
 
-                  <select 
-                    className="form-control"
-                    value={selectedCustomerOption}
-                    onChange={handleSelectCustomerDropdown}
-                    style={{
-                      height: '46px',
-                      fontSize: '0.92rem',
-                      fontWeight: 600,
-                      backgroundColor: '#ffffff',
-                      border: '2px solid #93c5fd',
-                      borderRadius: '10px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="manual">➕ Nouveau Client / Saisir manuellement...</option>
-                    <optgroup label="--- Clients Réguliers & Enregistrés ---">
-                      {regularCustomersList.map((item, idx) => (
-                        <option key={idx} value={item.customer.phone}>
-                          👤 {item.customer.name} — 📱 {item.customer.phone} ({item.repairCount} réparation{item.repairCount > 1 ? 's' : ''})
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#16a34a' }} />
+                    <input
+                      type="text"
+                      placeholder="Tapez un nom (ex: KOFFI) ou un numéro (ex: 0708)..."
+                      value={customerSearchQuery}
+                      onChange={e => {
+                        setCustomerSearchQuery(e.target.value);
+                        setShowSearchDropdown(true);
+                      }}
+                      onFocus={() => setShowSearchDropdown(true)}
+                      className="form-control"
+                      style={{
+                        paddingLeft: '42px',
+                        height: '46px',
+                        fontSize: '0.92rem',
+                        fontWeight: 600,
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #86efac',
+                        borderRadius: '10px'
+                      }}
+                    />
+
+                    {/* Liste des suggestions dynamiques */}
+                    {showSearchDropdown && searchedCustomers.length > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        marginTop: '4px',
+                        backgroundColor: '#ffffff',
+                        borderRadius: '12px',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.15)',
+                        border: '1.5px solid #86efac',
+                        zIndex: 50,
+                        maxHeight: '260px',
+                        overflowY: 'auto'
+                      }}>
+                        {searchedCustomers.map((item, idx) => (
+                          <div
+                            key={idx}
+                            onClick={() => handleSelectCustomerProfile(item)}
+                            style={{
+                              padding: '10px 14px',
+                              borderBottom: idx < searchedCustomers.length - 1 ? '1px solid #f1f5f9' : 'none',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              transition: 'background-color 0.15s ease'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                          >
+                            <div>
+                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>
+                                👤 {item.customer.name}
+                              </div>
+                              <div style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>
+                                📱 {item.customer.phone} {item.customer.phone2 ? `• ${item.customer.phone2}` : ''}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{
+                                backgroundColor: '#dcfce7',
+                                color: '#166534',
+                                padding: '3px 8px',
+                                borderRadius: '6px',
+                                fontSize: '0.72rem',
+                                fontWeight: 700
+                              }}>
+                                {item.repairCount} réparation{item.repairCount > 1 ? 's' : ''}
+                              </span>
+                              {item.lastRepair?.device && (
+                                <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '2px' }}>
+                                  Dernier : {item.lastRepair.device}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {recognizedCustomer && (
                     <div style={{
@@ -892,17 +1034,28 @@ const CreateInvoice = () => {
                       display: 'flex',
                       justifyContent: 'space-between',
                       alignItems: 'center',
-                      fontSize: '0.8rem'
+                      fontSize: '0.82rem'
                     }}>
-                      <span style={{ color: '#166534', fontWeight: 600 }}>
-                        ⭐ Client régulier : <strong>{recognizedCustomer.repairCount}</strong> passage(s) en atelier
+                      <span style={{ color: '#166534', fontWeight: 700 }}>
+                        ⭐ Client chargé : <strong>{recognizedCustomer.customer.name}</strong> ({recognizedCustomer.repairCount} réparation(s) antérieures)
                       </span>
                       <button 
                         type="button" 
-                        onClick={() => handleSelectCustomerDropdown({ target: { value: 'manual' } } as any)}
-                        style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            customerName: '',
+                            customerPhone: '',
+                            customerPhone2: '',
+                            customerPhone3: ''
+                          }));
+                          setRecognizedCustomer(null);
+                          setSelectedCustomerOption('manual');
+                          setCustomerSearchQuery('');
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 700, cursor: 'pointer', fontSize: '0.78rem' }}
                       >
-                        Nouveau Client
+                        ✕ Effacer / Nouveau client
                       </button>
                     </div>
                   )}
@@ -933,15 +1086,90 @@ const CreateInvoice = () => {
                   backgroundColor: '#f8fafc',
                   padding: '1.25rem',
                   borderRadius: '14px',
-                  border: '1px solid #e2e8f0',
+                  border: isPhone1Conflict ? '2px solid #f87171' : '1px solid #e2e8f0',
                   marginBottom: '1.75rem'
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
                       <Phone size={16} color="#2563eb" />
-                      Numéros de Téléphone du Client
+                      Numéros de Téléphone du Client (Contact Unique)
                     </label>
                   </div>
+
+                  {/* 🚨 ALERTE INSTANTANÉE DE CONFLIT DE NUMÉRO */}
+                  {isPhone1Conflict && existingOwnerPhone1 && (
+                    <div style={{
+                      backgroundColor: '#fef2f2',
+                      border: '1.5px solid #f87171',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      marginBottom: '12px',
+                      color: '#991b1b',
+                      fontSize: '0.85rem'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
+                        <AlertCircle size={18} color="#dc2626" />
+                        <span>⚠️ Numéro déjà attribué à un autre client !</span>
+                      </div>
+                      <p style={{ margin: '4px 0 8px 0', lineHeight: 1.4, color: '#7f1d1d' }}>
+                        Le numéro <strong>{formData.customerPhone}</strong> est déjà la propriété du client <strong>"{existingOwnerPhone1.customer.name}"</strong>. Deux clients différents ne peuvent pas avoir le même numéro.
+                      </p>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectCustomerProfile(existingOwnerPhone1)}
+                          style={{
+                            backgroundColor: '#dc2626',
+                            color: '#ffffff',
+                            border: 'none',
+                            padding: '5px 12px',
+                            borderRadius: '6px',
+                            fontWeight: 700,
+                            fontSize: '0.78rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          👉 Utiliser la fiche de "{existingOwnerPhone1.customer.name}"
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, customerPhone: '' }))}
+                          style={{
+                            backgroundColor: '#ffffff',
+                            color: '#dc2626',
+                            border: '1px solid #f87171',
+                            padding: '5px 10px',
+                            borderRadius: '6px',
+                            fontWeight: 600,
+                            fontSize: '0.78rem',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Corriger le numéro
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ✅ CONFIRMATION SI LE NUMÉRO CORRESPOND BIEN AU CLIENT CHARGÉ */}
+                  {!isPhone1Conflict && existingOwnerPhone1 && formData.customerName.trim() && (
+                    <div style={{
+                      backgroundColor: '#f0fdf4',
+                      border: '1px solid #86efac',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      marginBottom: '12px',
+                      fontSize: '0.8rem',
+                      color: '#15803d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontWeight: 600
+                    }}>
+                      <CheckCircle2 size={15} color="#16a34a" />
+                      <span>Numéro vérifié et reconnu pour <strong>{existingOwnerPhone1.customer.name}</strong></span>
+                    </div>
+                  )}
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                     {/* Contact 1 */}
@@ -955,7 +1183,12 @@ const CreateInvoice = () => {
                         required 
                         className="form-control" 
                         placeholder="07 00 00 00 01" 
-                        style={{ fontSize: '0.9rem', border: '1.5px solid #93c5fd', fontWeight: 600 }}
+                        style={{
+                          fontSize: '0.9rem',
+                          border: isPhone1Conflict ? '2px solid #ef4444' : '1.5px solid #93c5fd',
+                          fontWeight: 600,
+                          backgroundColor: isPhone1Conflict ? '#fef2f2' : '#ffffff'
+                        }}
                         value={formData.customerPhone} 
                         onChange={handleChange} 
                       />
@@ -1382,17 +1615,18 @@ const CreateInvoice = () => {
                 {/* Modalités de Règlement & Encaissement */}
                 <div style={{ marginBottom: '1.5rem', backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                   <label className="form-label" style={{ fontWeight: 700, marginBottom: '8px', color: '#0f172a' }}>
-                    💳 Modalités de Règlement & Encaissement
+                    💳 Modalités de Règlement & Acompte
                   </label>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: formData.paymentStatus === 'Payé' ? '1rem' : 0 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginBottom: (formData.paymentStatus === 'Payé' || formData.paymentStatus === 'Partiel') ? '1rem' : 0 }}>
+                    {/* Option 1: Impayé */}
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, paymentStatus: 'Impayé' }))}
+                      onClick={() => setFormData(prev => ({ ...prev, paymentStatus: 'Impayé', advancePayment: '' }))}
                       style={{
-                        padding: '10px 12px',
+                        padding: '10px 10px',
                         borderRadius: '10px',
-                        fontSize: '0.85rem',
+                        fontSize: '0.82rem',
                         fontWeight: formData.paymentStatus === 'Impayé' ? 700 : 500,
                         backgroundColor: formData.paymentStatus === 'Impayé' ? '#fff7ed' : '#ffffff',
                         color: formData.paymentStatus === 'Impayé' ? '#c2410c' : '#475569',
@@ -1401,16 +1635,42 @@ const CreateInvoice = () => {
                         textAlign: 'center'
                       }}
                     >
-                      ⏳ À régler au retrait (Impayé)
+                      ⏳ 100% au retrait<br />
+                      <small style={{ fontWeight: 400, opacity: 0.8 }}>(0 F d'avance)</small>
                     </button>
 
+                    {/* Option 2: Avance / Acompte */}
                     <button
                       type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, paymentStatus: 'Payé' }))}
+                      onClick={() => setFormData(prev => ({ 
+                        ...prev, 
+                        paymentStatus: 'Partiel', 
+                        advancePayment: prev.advancePayment || (prev.price ? String(Math.floor(Number(prev.price) / 2)) : '') 
+                      }))}
                       style={{
-                        padding: '10px 12px',
+                        padding: '10px 10px',
                         borderRadius: '10px',
-                        fontSize: '0.85rem',
+                        fontSize: '0.82rem',
+                        fontWeight: formData.paymentStatus === 'Partiel' ? 700 : 500,
+                        backgroundColor: formData.paymentStatus === 'Partiel' ? '#eff6ff' : '#ffffff',
+                        color: formData.paymentStatus === 'Partiel' ? '#1d4ed8' : '#475569',
+                        border: formData.paymentStatus === 'Partiel' ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                        cursor: 'pointer',
+                        textAlign: 'center'
+                      }}
+                    >
+                      💰 Avance / Acompte<br />
+                      <small style={{ fontWeight: 400, opacity: 0.8 }}>(Reste au retrait)</small>
+                    </button>
+
+                    {/* Option 3: Payé totalité */}
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, paymentStatus: 'Payé', advancePayment: prev.price }))}
+                      style={{
+                        padding: '10px 10px',
+                        borderRadius: '10px',
+                        fontSize: '0.82rem',
                         fontWeight: formData.paymentStatus === 'Payé' ? 700 : 500,
                         backgroundColor: formData.paymentStatus === 'Payé' ? '#f0fdf4' : '#ffffff',
                         color: formData.paymentStatus === 'Payé' ? '#15803d' : '#475569',
@@ -1419,16 +1679,66 @@ const CreateInvoice = () => {
                         textAlign: 'center'
                       }}
                     >
-                      ✅ Encaissé immédiatement (Payé)
+                      ✅ Totalement payé<br />
+                      <small style={{ fontWeight: 400, opacity: 0.8 }}>(100% réglé d'avance)</small>
                     </button>
                   </div>
 
-                  {formData.paymentStatus === 'Payé' && (
+                  {/* Saisie montant avance si Partiel */}
+                  {formData.paymentStatus === 'Partiel' && (
+                    <div style={{ backgroundColor: '#ffffff', padding: '1rem', borderRadius: '10px', border: '1.5px solid #bfdbfe', marginBottom: '1rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', alignItems: 'center' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#1e3a8a', marginBottom: '4px' }}>
+                            Montant de l'avance versée (FCFA) <span style={{ color: '#ef4444' }}>*</span>
+                          </label>
+                          <div style={{ position: 'relative' }}>
+                            <input 
+                              type="number" 
+                              name="advancePayment"
+                              min="1"
+                              max={formData.price ? String(Number(formData.price) - 1) : undefined}
+                              required 
+                              className="form-control" 
+                              placeholder="ex: 5000" 
+                              style={{ fontSize: '1.05rem', fontWeight: 800, paddingRight: '55px', color: '#1d4ed8', height: '42px', border: '2px solid #3b82f6' }}
+                              value={formData.advancePayment} 
+                              onChange={handleChange} 
+                            />
+                            <span style={{
+                              position: 'absolute',
+                              right: '12px',
+                              top: '50%',
+                              transform: 'translateY(-50%)',
+                              fontSize: '0.8rem',
+                              fontWeight: 800,
+                              color: '#64748b'
+                            }}>
+                              FCFA
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Reste à payer calculé */}
+                        <div style={{ backgroundColor: '#fff7ed', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid #fed7aa' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#c2410c', textTransform: 'uppercase' }}>
+                            Solde restant au retrait :
+                          </span>
+                          <div style={{ fontSize: '1.2rem', fontWeight: 900, color: '#ea580c', marginTop: '2px' }}>
+                            {Math.max(0, (Number(formData.price) || 0) - (Number(formData.advancePayment) || 0)).toLocaleString('fr-FR')} FCFA
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Informations sur l'encaisseur et mode de paiement de l'avance / totalité */}
+                  {(formData.paymentStatus === 'Payé' || formData.paymentStatus === 'Partiel') && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', paddingTop: '0.75rem', borderTop: '1px solid #e2e8f0' }}>
                       {/* Encaisseur */}
                       <div>
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                          Encaisseur (Qui perçoit l'argent ?) <span style={{ color: '#ef4444' }}>*</span>
+                          {formData.paymentStatus === 'Partiel' ? "Encaisseur de l'avance" : "Encaisseur (Qui perçoit l'argent ?)"} <span style={{ color: '#ef4444' }}>*</span>
                         </label>
                         <select
                           name="paymentCollectorId"
@@ -1451,7 +1761,7 @@ const CreateInvoice = () => {
                       {/* Mode de règlement */}
                       <div>
                         <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                          Mode de règlement
+                          {formData.paymentStatus === 'Partiel' ? "Moyen de paiement de l'avance" : "Mode de règlement"}
                         </label>
                         <select
                           name="paymentMethod"
@@ -1623,7 +1933,7 @@ const CreateInvoice = () => {
                 </div>
               </div>
 
-              {/* Résumé Étape 3 : Montant */}
+              {/* Résumé Étape 3 : Montant & Acompte */}
               <div style={{
                 background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)',
                 color: '#ffffff',
@@ -1632,15 +1942,38 @@ const CreateInvoice = () => {
                 marginBottom: '1.25rem',
                 boxShadow: '0 8px 20px rgba(49, 46, 129, 0.25)'
               }}>
-                <div style={{ marginBottom: '6px' }}>
-                  <span style={{ fontSize: '0.78rem', color: '#c7d2fe', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    TOTAL FACTURÉ CONVENU
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '0.75rem', color: '#c7d2fe', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    TOTAL RÉPARATION
+                  </span>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    backgroundColor: formData.paymentStatus === 'Payé' ? '#15803d' : (formData.paymentStatus === 'Partiel' ? '#2563eb' : '#d97706'),
+                    color: '#ffffff'
+                  }}>
+                    {formData.paymentStatus === 'Payé' ? 'Payé' : (formData.paymentStatus === 'Partiel' ? 'Avance versée' : 'Impayé')}
                   </span>
                 </div>
                 
-                <div style={{ fontSize: '1.8rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
-                  {formattedPrice} <span style={{ fontSize: '1rem', fontWeight: 600, color: '#a5b4fc' }}>FCFA</span>
+                <div style={{ fontSize: '1.7rem', fontWeight: 900, letterSpacing: '-0.5px' }}>
+                  {formattedPrice} <span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#a5b4fc' }}>FCFA</span>
                 </div>
+
+                {formData.paymentStatus === 'Partiel' && formData.advancePayment && (
+                  <div style={{ marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.15)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.8rem' }}>
+                    <div>
+                      <div style={{ color: '#93c5fd', fontSize: '0.7rem' }}>Avance versée :</div>
+                      <div style={{ fontWeight: 800, color: '#67e8f9' }}>{Number(formData.advancePayment).toLocaleString('fr-FR')} F</div>
+                    </div>
+                    <div>
+                      <div style={{ color: '#fed7aa', fontSize: '0.7rem' }}>Reste au retrait :</div>
+                      <div style={{ fontWeight: 800, color: '#fdba74' }}>{Math.max(0, (Number(formData.price) || 0) - Number(formData.advancePayment)).toLocaleString('fr-FR')} F</div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* BOUTONS D'ACTION RAPIDES */}
