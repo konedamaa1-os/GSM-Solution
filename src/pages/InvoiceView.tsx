@@ -493,55 +493,55 @@ const InvoiceView = () => {
             className="ticket-container" 
             style={{
               width: '100%',
-              maxWidth: '280px',
+              maxWidth: '260px',
               margin: '0 auto',
               backgroundColor: '#ffffff',
-              padding: '1rem 0.85rem',
-              borderRadius: '10px',
+              padding: '0.65rem 0.65rem',
+              borderRadius: '8px',
               border: '1.5px dashed #94a3b8',
-              boxShadow: '0 8px 25px rgba(0,0,0,0.06)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
               fontFamily: '"Courier New", Courier, monospace, system-ui',
               color: '#0f172a',
-              lineHeight: 1.25,
-              fontSize: '0.78rem'
+              lineHeight: 1.15,
+              fontSize: '0.74rem'
             }}
           >
             {/* En-tête Boutique */}
-            <div style={{ textAlign: 'center', paddingBottom: '6px' }}>
-              <div style={{ fontSize: '1.05rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3px', color: '#0f172a' }}>
+            <div style={{ textAlign: 'center', paddingBottom: '2px' }}>
+              <div style={{ fontSize: '0.98rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2px', color: '#0f172a' }}>
                 {shopName}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#475569', marginTop: '1px', fontWeight: 700 }}>
+              <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: '1px', fontWeight: 700 }}>
                 SERVICE RÉPARATION & GSM
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '1px' }}>
+              <div style={{ fontSize: '0.68rem', color: '#64748b' }}>
                 📍 {shopAddress}
               </div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#1e293b', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#1e293b' }}>
                 📞 {shopPhone1} {shopPhone2 && `• ${shopPhone2}`}
               </div>
             </div>
 
-            <div style={{ borderTop: '1px dashed #94a3b8', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #94a3b8', margin: '3px 0' }} />
 
             {/* Numéro & Date */}
-            <div style={{ textAlign: 'center', padding: '2px 0' }}>
-              <div style={{ fontSize: '0.78rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <div style={{ textAlign: 'center', padding: '1px 0' }}>
+              <div style={{ fontSize: '0.74rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                 TICKET DE PRISE EN CHARGE
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#2563eb', margin: '2px 0' }}>
+              <div style={{ fontSize: '0.9rem', fontWeight: 900, color: '#2563eb', margin: '1px 0' }}>
                 N° {invoice.invoiceNumber}
               </div>
-              <div style={{ fontSize: '0.7rem', color: '#475569', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.68rem', color: '#475569', fontWeight: 600 }}>
                 📅 {new Date(invoice.date).toLocaleDateString('fr-FR')} à {new Date(invoice.date).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
 
-            <div style={{ borderTop: '1px dashed #94a3b8', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #94a3b8', margin: '3px 0' }} />
 
             {/* Informations Client */}
-            <div style={{ fontSize: '0.75rem', padding: '1px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
+            <div style={{ fontSize: '0.72rem', padding: '0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                 <span style={{ color: '#64748b', fontWeight: 700 }}>CLIENT :</span>
                 <span style={{ fontWeight: 900, textTransform: 'uppercase', textAlign: 'right' }}>{invoice.customer.name}</span>
               </div>
@@ -551,63 +551,63 @@ const InvoiceView = () => {
               </div>
             </div>
 
-            <div style={{ borderTop: '1px dashed #94a3b8', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #94a3b8', margin: '3px 0' }} />
 
             {/* Détails Appareil & Panne */}
-            <div style={{ fontSize: '0.75rem', padding: '1px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '3px' }}>
+            <div style={{ fontSize: '0.72rem', padding: '0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1px' }}>
                 <span style={{ color: '#64748b', fontWeight: 700 }}>APPAREIL :</span>
                 <span style={{ fontWeight: 900, textTransform: 'uppercase', textAlign: 'right' }}>{invoice.device.brand} {invoice.device.model}</span>
               </div>
-              <div style={{ marginBottom: '3px' }}>
+              <div style={{ marginBottom: '1px' }}>
                 <span style={{ color: '#64748b', fontWeight: 700 }}>PANNE :</span>
-                <div style={{ fontWeight: 800, backgroundColor: '#f8fafc', padding: '4px 6px', borderRadius: '4px', marginTop: '2px', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: '0.73rem' }}>
+                <div style={{ fontWeight: 800, backgroundColor: '#f8fafc', padding: '2px 5px', borderRadius: '3px', marginTop: '1px', border: '1px solid #e2e8f0', color: '#0f172a', fontSize: '0.7rem' }}>
                   🛠️ {invoice.device.issue}
                 </div>
               </div>
               {invoice.device.accessories && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', marginTop: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', marginTop: '1px' }}>
                   <span style={{ color: '#64748b', fontWeight: 600 }}>Accessoires :</span>
                   <span style={{ fontWeight: 700 }}>{invoice.device.accessories}</span>
                 </div>
               )}
             </div>
 
-            <div style={{ borderTop: '1px dashed #94a3b8', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #94a3b8', margin: '3px 0' }} />
 
             {/* Montant & Règlement */}
-            <div style={{ textAlign: 'center', padding: '6px 0', backgroundColor: '#f8fafc', borderRadius: '6px', border: '1px solid #cbd5e1', margin: '4px 0' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <div style={{ textAlign: 'center', padding: '3px 0', backgroundColor: '#f8fafc', borderRadius: '5px', border: '1px solid #cbd5e1', margin: '2px 0' }}>
+              <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                 MONTANT TOTAL
               </div>
-              <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a', margin: '1px 0' }}>
-                {invoice.price.toLocaleString('fr-FR')} <span style={{ fontSize: '0.82rem' }}>FCFA</span>
+              <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a', margin: '0' }}>
+                {invoice.price.toLocaleString('fr-FR')} <span style={{ fontSize: '0.78rem' }}>FCFA</span>
               </div>
               
               {/* Détail Avance et Reste si Partiel ou Payé avec avance */}
               {isPartial && (
-                <div style={{ margin: '4px 6px', padding: '5px', backgroundColor: '#ffffff', borderRadius: '5px', border: '1px solid #bfdbfe' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: '#1e40af', fontWeight: 700 }}>
+                <div style={{ margin: '2px 4px', padding: '3px 4px', backgroundColor: '#ffffff', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#1e40af', fontWeight: 700 }}>
                     <span>Avance versée :</span>
                     <span>{advanceAmount.toLocaleString('fr-FR')} FCFA</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#c2410c', fontWeight: 900, marginTop: '2px', borderTop: '1px dashed #fed7aa', paddingTop: '2px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#c2410c', fontWeight: 900, marginTop: '1px', borderTop: '1px dashed #fed7aa', paddingTop: '1px' }}>
                     <span>SOLDE AU RETRAIT :</span>
                     <span>{remainingBalance.toLocaleString('fr-FR')} FCFA</span>
                   </div>
                 </div>
               )}
 
-              <div style={{ marginTop: '3px' }}>
+              <div style={{ marginTop: '2px' }}>
                 {isPaid ? (
                   <span style={{
                     display: 'inline-block',
                     backgroundColor: '#dcfce7',
                     color: '#15803d',
-                    padding: '3px 8px',
+                    padding: '2px 6px',
                     borderRadius: '4px',
                     fontWeight: 900,
-                    fontSize: '0.72rem'
+                    fontSize: '0.68rem'
                   }}>
                     ✅ TOTALEMENT RÉGLÉ ({invoice.balancePaymentMethod || invoice.paymentMethod || 'Espèces'})
                   </span>
@@ -616,10 +616,10 @@ const InvoiceView = () => {
                     display: 'inline-block',
                     backgroundColor: '#eff6ff',
                     color: '#1d4ed8',
-                    padding: '3px 8px',
+                    padding: '2px 6px',
                     borderRadius: '4px',
                     fontWeight: 900,
-                    fontSize: '0.72rem',
+                    fontSize: '0.68rem',
                     border: '1px solid #93c5fd'
                   }}>
                     🟡 AVANCE REÇUE (Solde à payer)
@@ -629,10 +629,10 @@ const InvoiceView = () => {
                     display: 'inline-block',
                     backgroundColor: '#fff7ed',
                     color: '#c2410c',
-                    padding: '3px 8px',
+                    padding: '2px 6px',
                     borderRadius: '4px',
                     fontWeight: 900,
-                    fontSize: '0.72rem'
+                    fontSize: '0.68rem'
                   }}>
                     ⏳ IMPAYÉ (À régler au retrait)
                   </span>
@@ -641,34 +641,34 @@ const InvoiceView = () => {
 
               {/* Traçabilité Encaisseurs */}
               {invoice.paymentCollectorName && (
-                <div style={{ fontSize: '0.68rem', color: '#475569', marginTop: '3px', fontWeight: 600 }}>
+                <div style={{ fontSize: '0.65rem', color: '#475569', marginTop: '2px', fontWeight: 600 }}>
                   {isPartial ? "Avance reçue par :" : "Encaissé par :"} <strong>{invoice.paymentCollectorName}</strong>
                 </div>
               )}
               {invoice.balancePaymentCollectorName && (
-                <div style={{ fontSize: '0.68rem', color: '#15803d', marginTop: '1px', fontWeight: 700 }}>
+                <div style={{ fontSize: '0.65rem', color: '#15803d', marginTop: '1px', fontWeight: 700 }}>
                   Solde retrait reçu par : <strong>{invoice.balancePaymentCollectorName}</strong>
                 </div>
               )}
             </div>
 
-            <div style={{ borderTop: '1px dashed #94a3b8', margin: '6px 0' }} />
+            <div style={{ borderTop: '1px dashed #94a3b8', margin: '3px 0' }} />
 
             {/* Intervenant & Conditions */}
-            <div style={{ textAlign: 'center', fontSize: '0.7rem', color: '#475569' }}>
-              <div style={{ marginBottom: '2px' }}>
+            <div style={{ textAlign: 'center', fontSize: '0.66rem', color: '#475569' }}>
+              <div>
                 Technicien : <strong>{techEmployee?.name || 'Atelier'}</strong>
               </div>
-              <div style={{ fontStyle: 'italic', fontSize: '0.68rem', color: '#64748b', marginTop: '4px', lineHeight: 1.25 }}>
+              <div style={{ fontStyle: 'italic', fontSize: '0.64rem', color: '#64748b', marginTop: '2px', lineHeight: 1.15 }}>
                 * Présentation de ce ticket obligatoire pour le retrait. *<br />
                 * Appareil non réclamé après 60 jours recyclé. *
               </div>
-              <div style={{ fontWeight: 800, color: '#0f172a', marginTop: '4px', fontSize: '0.74rem' }}>
+              <div style={{ fontWeight: 800, color: '#0f172a', marginTop: '2px', fontSize: '0.7rem' }}>
                 Merci pour votre confiance !
               </div>
 
               {/* Simulated Barcode */}
-              <div style={{ marginTop: '5px', letterSpacing: '3px', fontSize: '0.8rem', color: '#64748b', fontWeight: 900 }}>
+              <div style={{ marginTop: '3px', letterSpacing: '2px', fontSize: '0.75rem', color: '#64748b', fontWeight: 900 }}>
                 ||||| | || |||| | ||||| | |||
               </div>
             </div>
