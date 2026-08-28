@@ -703,66 +703,67 @@ const CreateInvoice = () => {
   return (
     <div style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem' }}>
       
-      {/* 🌟 EN-TÊTE PRINCIPAL */}
+      {/* 🌟 EN-TÊTE PRINCIPAL ULTRA-MODERNE */}
       <div style={{
         display: 'flex',
         flexWrap: 'wrap',
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: '1rem',
-        marginBottom: '1.75rem',
+        marginBottom: '1.5rem',
         padding: '1.25rem 1.75rem',
-        backgroundColor: '#ffffff',
+        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
         borderRadius: '16px',
-        border: '1px solid var(--border-color)',
-        boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)'
+        border: '1px solid #e2e8f0',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button 
             type="button" 
             className="btn btn-secondary" 
             onClick={() => navigate(-1)}
-            style={{ padding: '8px 12px', borderRadius: '10px' }}
+            style={{ padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
             title="Retour"
           >
             <ArrowLeft size={18} />
           </button>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               <span style={{
                 backgroundColor: '#eff6ff',
-                color: '#2563eb',
-                padding: '3px 10px',
+                color: '#1d4ed8',
+                padding: '2px 8px',
                 borderRadius: '6px',
-                fontSize: '0.75rem',
+                fontSize: '0.72rem',
                 fontWeight: 700,
-                letterSpacing: '0.5px'
+                letterSpacing: '0.4px',
+                border: '1px solid #bfdbfe'
               }}>
-                PRISE EN CHARGE AVEC LISTES DÉROULANTES
+                ATELIER & PRISE EN CHARGE
               </span>
-              <span style={{ color: '#94a3b8', fontSize: '0.85rem' }}>• {currentShop?.name || 'GSM Solution'}</span>
+              <span style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>• {currentShop?.name || 'GSM Solution'}</span>
             </div>
-            <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '4px 0 0 0', color: '#0f172a' }}>
+            <h1 style={{ fontSize: '1.45rem', fontWeight: 900, margin: '3px 0 0 0', color: '#0f172a', letterSpacing: '-0.3px' }}>
               Nouvelle Fiche & Facture de Réparation
             </h1>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {assignedEmployee && (
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
+              gap: '6px',
               backgroundColor: '#f0fdf4',
               border: '1px solid #bbf7d0',
-              padding: '6px 14px',
+              padding: '6px 12px',
               borderRadius: '999px',
-              fontSize: '0.85rem',
+              fontSize: '0.82rem',
               color: '#166534',
-              fontWeight: 600
+              fontWeight: 700
             }}>
-              <Wrench size={14} color="#16a34a" />
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22c55e' }} />
               <span>Opérateur : <strong>{assignedEmployee.name}</strong></span>
             </div>
           )}
@@ -771,7 +772,7 @@ const CreateInvoice = () => {
             type="button" 
             className="btn btn-secondary" 
             onClick={handleResetForm}
-            style={{ fontSize: '0.82rem', padding: '6px 12px', color: '#64748b' }}
+            style={{ fontSize: '0.8rem', padding: '6px 12px', color: '#64748b', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}
             title="Réinitialiser tous les champs"
           >
             <RotateCcw size={14} /> Recommencer
@@ -782,9 +783,9 @@ const CreateInvoice = () => {
       {/* 🧭 STEPPER INTERACTIF PROGRESSIF (ÉTAPES 1, 2, 3) */}
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(3, 1fr)',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         gap: '12px',
-        marginBottom: '1.75rem'
+        marginBottom: '1.5rem'
       }}>
         {STEPS.map((step) => {
           const isActive = currentStep === step.id;
@@ -799,11 +800,11 @@ const CreateInvoice = () => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
-                padding: '14px 16px',
+                padding: '12px 16px',
                 borderRadius: '14px',
-                backgroundColor: isActive ? '#ffffff' : '#f8fafc',
-                border: isActive ? '2px solid #2563eb' : (isDone ? '1px solid #86efac' : '1px solid #e2e8f0'),
-                boxShadow: isActive ? '0 6px 16px rgba(37, 99, 235, 0.12)' : 'none',
+                backgroundColor: isActive ? '#ffffff' : (isDone ? '#f0fdf4' : '#f8fafc'),
+                border: isActive ? '2px solid #2563eb' : (isDone ? '1.5px solid #86efac' : '1px solid #e2e8f0'),
+                boxShadow: isActive ? '0 6px 18px rgba(37, 99, 235, 0.12)' : 'none',
                 cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'all 0.2s ease',
@@ -811,24 +812,24 @@ const CreateInvoice = () => {
               }}
             >
               <div style={{
-                width: '36px',
-                height: '36px',
+                width: '34px',
+                height: '34px',
                 borderRadius: '10px',
-                backgroundColor: isActive ? '#2563eb' : (isDone ? '#dcfce7' : '#e2e8f0'),
-                color: isActive ? '#ffffff' : (isDone ? '#16a34a' : '#64748b'),
+                backgroundColor: isActive ? '#2563eb' : (isDone ? '#16a34a' : '#e2e8f0'),
+                color: isActive || isDone ? '#ffffff' : '#64748b',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 800,
-                fontSize: '0.95rem',
+                fontSize: '0.9rem',
                 flexShrink: 0
               }}>
-                {isDone && !isActive ? <Check size={18} /> : step.id}
+                {isDone && !isActive ? <Check size={16} /> : step.id}
               </div>
 
               <div style={{ overflow: 'hidden' }}>
                 <div style={{
-                  fontSize: '0.72rem',
+                  fontSize: '0.7rem',
                   fontWeight: 700,
                   color: isActive ? '#2563eb' : (isDone ? '#16a34a' : '#64748b'),
                   textTransform: 'uppercase',
@@ -837,9 +838,9 @@ const CreateInvoice = () => {
                   Étape {step.id} {isDone ? '✓ Validée' : ''}
                 </div>
                 <div style={{
-                  fontSize: '0.88rem',
+                  fontSize: '0.85rem',
                   fontWeight: 700,
-                  color: isActive ? '#0f172a' : '#334155',
+                  color: isActive ? '#0f172a' : (isDone ? '#166534' : '#334155'),
                   whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis'
@@ -921,25 +922,33 @@ const CreateInvoice = () => {
 
                 {/* 🔍 RECHERCHE INSTANTANÉE D'UN ANCIEN CLIENT */}
                 <div style={{
-                  backgroundColor: '#f0fdf4',
-                  border: '1.5px solid #86efac',
+                  backgroundColor: '#f8fafc',
+                  border: '1.5px solid #e2e8f0',
                   borderRadius: '14px',
-                  padding: '1.25rem',
+                  padding: '1.1rem',
                   marginBottom: '1.5rem',
                   position: 'relative'
                 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.88rem', fontWeight: 800, color: '#166534', margin: 0 }}>
-                      <Search size={17} color="#16a34a" />
-                      Rechercher un Ancien Client (Nom ou Téléphone) :
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '6px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      <Search size={16} color="#2563eb" />
+                      Rechercher un Ancien Client
                     </label>
-                    <span style={{ fontSize: '0.75rem', color: '#15803d', fontWeight: 600 }}>
-                      {regularCustomersList.length} client(s) en mémoire
+                    <span style={{
+                      fontSize: '0.72rem',
+                      color: '#2563eb',
+                      backgroundColor: '#eff6ff',
+                      padding: '2px 8px',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      border: '1px solid #bfdbfe'
+                    }}>
+                      💾 {regularCustomersList.length} client(s) en mémoire
                     </span>
                   </div>
 
                   <div style={{ position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#16a34a' }} />
+                    <Search size={17} style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                     <input
                       type="text"
                       placeholder="Tapez un nom (ex: KOFFI) ou un numéro (ex: 0708)..."
@@ -951,12 +960,12 @@ const CreateInvoice = () => {
                       onFocus={() => setShowSearchDropdown(true)}
                       className="form-control"
                       style={{
-                        paddingLeft: '42px',
-                        height: '46px',
-                        fontSize: '0.92rem',
+                        paddingLeft: '40px',
+                        height: '44px',
+                        fontSize: '0.9rem',
                         fontWeight: 600,
                         backgroundColor: '#ffffff',
-                        border: '2px solid #86efac',
+                        border: '1.5px solid #cbd5e1',
                         borderRadius: '10px'
                       }}
                     />
@@ -972,7 +981,7 @@ const CreateInvoice = () => {
                         backgroundColor: '#ffffff',
                         borderRadius: '12px',
                         boxShadow: '0 12px 30px rgba(0,0,0,0.15)',
-                        border: '1.5px solid #86efac',
+                        border: '1.5px solid #3b82f6',
                         zIndex: 50,
                         maxHeight: '260px',
                         overflowY: 'auto'
@@ -990,14 +999,14 @@ const CreateInvoice = () => {
                               alignItems: 'center',
                               transition: 'background-color 0.15s ease'
                             }}
-                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0fdf4'}
+                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#eff6ff'}
                             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
                           >
                             <div>
-                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>
+                              <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.9rem' }}>
                                 👤 {item.customer.name}
                               </div>
-                              <div style={{ fontSize: '0.8rem', color: '#16a34a', fontWeight: 600, marginTop: '2px' }}>
+                              <div style={{ fontSize: '0.78rem', color: '#2563eb', fontWeight: 600, marginTop: '2px' }}>
                                 📱 {item.customer.phone} {item.customer.phone2 ? `• ${item.customer.phone2}` : ''}
                               </div>
                             </div>
@@ -1027,8 +1036,8 @@ const CreateInvoice = () => {
                   {recognizedCustomer && (
                     <div style={{
                       marginTop: '10px',
-                      backgroundColor: '#ffffff',
-                      borderRadius: '8px',
+                      backgroundColor: '#f0fdf4',
+                      borderRadius: '10px',
                       padding: '8px 12px',
                       border: '1px solid #86efac',
                       display: 'flex',
@@ -1055,7 +1064,7 @@ const CreateInvoice = () => {
                         }}
                         style={{ background: 'none', border: 'none', color: '#ef4444', fontWeight: 700, cursor: 'pointer', fontSize: '0.78rem' }}
                       >
-                        ✕ Effacer / Nouveau client
+                        ✕ Changer de client
                       </button>
                     </div>
                   )}
