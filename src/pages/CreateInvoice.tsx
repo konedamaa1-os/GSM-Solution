@@ -704,17 +704,8 @@ const CreateInvoice = () => {
   };
 
   const handleStepClick = (stepId: number) => {
-    if (stepId === 1) {
-      setCurrentStep(1);
-    } else if (stepId === 2) {
-      if (validateStep1()) {
-        setCurrentStep(2);
-      }
-    } else if (stepId === 3) {
-      if (validateStep1() && validateStep2()) {
-        setCurrentStep(3);
-      }
-    }
+    setValidationError('');
+    setCurrentStep(stepId);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -2200,17 +2191,17 @@ const CreateInvoice = () => {
 
               {/* Résumé Étape 2 : Appareil & Panne */}
               <div 
-                onClick={() => isStep1Done && setCurrentStep(2)}
+                onClick={() => setCurrentStep(2)}
                 style={{
                   backgroundColor: currentStep === 2 ? '#eff6ff' : '#ffffff',
                   border: currentStep === 2 ? '1.5px solid #93c5fd' : '1px solid #e2e8f0',
                   borderRadius: '12px',
                   padding: '1rem',
                   marginBottom: '1rem',
-                  cursor: isStep1Done ? 'pointer' : 'default',
+                  cursor: 'pointer',
                   transition: 'all 0.15s ease'
                 }}
-                title={isStep1Done ? "Cliquer pour modifier l'étape 2" : "Remplissez l'étape 1"}
+                title="Cliquer pour accéder à l'étape 2 (Appareil & Panne)"
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <span style={{ fontSize: '0.72rem', fontWeight: 700, color: currentStep === 2 ? '#1d4ed8' : '#64748b', textTransform: 'uppercase' }}>

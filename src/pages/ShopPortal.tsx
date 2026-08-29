@@ -253,6 +253,17 @@ export const ShopPortal: React.FC<ShopPortalProps> = ({ shop }) => {
                         </div>
                       </div>
 
+                      {inv.notes && (
+                        <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', backgroundColor: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                          <span style={{ fontSize: '0.72rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            💬 Commentaire & Observations atelier
+                          </span>
+                          <p style={{ margin: '4px 0 0 0', fontSize: '0.88rem', color: '#334155', fontWeight: 600 }}>
+                            {inv.notes}
+                          </p>
+                        </div>
+                      )}
+
                       <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
                         <Link
                           to={`/facture/${inv.id}`}
